@@ -1,0 +1,849 @@
+#!/usr/bin/python
+
+import os,sys,re
+import struct
+from cStringIO import StringIO
+import copy
+
+__version__ = "2.0.0b1"
+__author__ = "Rob McMullen <robm@users.sourceforge.net>"
+__url__ = "http://pyemf.sourceforge.net"
+
+# Reference: libemf.h
+# and also wine: http://cvs.winehq.org/cvsweb/wine/include/wingdi.h
+
+emrmap={}
+
+GDI_typedefs={
+    'SIZES':   (('h','cx'),('h','cy')),
+    'SIZEL':   (('i','cx'),('i','cy')),
+    'POINTS':  (('h','x'),('h','y')),
+    'POINTL':  (('i','x'),('i','y')),
+    'RECTL':   (('i','left'),('i','top'),('i','right'),('i','bottom')),
+    'LOGPEN':  (('i','style'),('POINTL','width'),('i','color')),
+    'XFORM':   (('f','eM11'),('f','eM12'),('f','eM21'),('f','eM22'),('f','eDx'),('f','eDy')),
+}
+
+class DC:
+    def __init__(self):
+        self.x=0
+        self.y=0
+        self.objects=[]
+
+
+format_cache={} # dict mapping emr_id to class
+
+def getFormat(typeid,typedef):
+    if typeid in format_cache:
+        return format_cache[typeid]
+    format=EMR_FORMAT(typeid,typedef)
+    format_cache[typeid]=format
+    return format
+
+class EMR_FORMAT:
+    def __init__(self,emr_id,typedef):
+        self.typedef=typedef
+        self.id=emr_id
+        self.fmt="<" # little endian
+        self.structsize=0
+
+        self.names=[]
+        self.namepos={}
+        
+        self.debug=0
+
+        self.setFormat(typedef)
+
+    def mangle(self,typecode,prefix,mangled=None):
+        """return a list of names that can be used to retrieve values
+        from the containing object.  Recursive.  Illustrates the
+        problem of a default argument being an empty list.  The
+        default argument is actually a reference, and it is the same
+        reference each time.  So, if you call this multiple times with
+        a default argument, the same list gets appended to."""
+        if len(typecode)>1:
+            if typecode in GDI_typedefs:
+                for subtype,name in GDI_typedefs[typecode]:
+                    if self.debug: print "  found subtype=%s prefix=%s name=%s" % (subtype,prefix,name)
+                    mangled=self.mangle(subtype,prefix+name,mangled)
+        else:
+            #print mangled
+            if mangled == None: mangled=[]
+            mangled.append(prefix)
+        return mangled
+        
+
+    def setFormat(self,typedef,prefix=""):
+        if self.debug: print "typedef=%s" % str(typedef)
+        if isinstance(typedef,list) or isinstance(typedef,tuple):
+            for typecode,name in typedef:
+                self.setFormatItem(typecode,prefix+name)
+        elif typedef:
+            raise AttributeError("format must be a list")
+
+    def setFormatItem(self,typecode,name):
+        if len(typecode)>1:
+            if typecode in GDI_typedefs:
+                self.setFormat(GDI_typedefs[typecode],name)
+        else:
+            self.appendFormat(typecode,name)
+
+    def appendFormat(self,typecode,name):
+        self.fmt+=typecode
+        self.namepos[name]=len(self.names)
+        self.names.append(name)
+        self.structsize=struct.calcsize(self.fmt)
+        if self.debug: print "current struct=%s size=%d\n  names=%s" % (self.fmt,self.structsize,self.names)
+
+    def extend(self,other):
+        """Append another format object onto this one.  Probably
+        should operate on a copy of the object so that the
+        format_cache isn't altered."""
+        i=1 # skip the other's leading '<'
+        for name in other.names:
+            self.appendFormat(other.fmt[i],name)
+            i+=1
+        self.typedef.extend(other.typedef)
+
+
+
+
+
+class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't work
+    """baseclass for EMR objects"""
+    
+    def __init__(self,typeid=0,typedef=None):
+        self.iType=typeid
+        self.nSize=0
+        self.datasize=0
+        self.data=None
+        self.unhandleddata=None
+        self.values=[]
+
+        #self.format=EMR_FORMAT(typeid,typedef)
+        self.format=getFormat(typeid,typedef)
+
+    def __getattr__(self,name):
+        f=EMR_UNKNOWN.__getattribute__(self,'format')
+        if name in f.names:
+            v=EMR_UNKNOWN.__getattribute__(self,'values')
+            index=f.namepos[name]
+            return v[index]
+        raise AttributeError("%s not defined in EMR object" % name)
+
+
+    def unserialize(self,fh,itype=-1,nsize=-1):
+        if itype>0:
+            self.iType=itype
+            self.nSize=nsize
+        else:
+            (self.iType,self.nSize)=struct.unpack("<ii",8)
+        if self.nSize>8:
+            self.datasize=self.nSize-8
+            self.data=fh.read(self.datasize)
+            if self.format.structsize>0:
+                if self.format.structsize>len(self.data):
+                    # we have a problem.  More stuff to unparse than
+                    # we have data.  Hmmm.  Fill with binary zeros
+                    # till I think of a better idea.
+                    self.data+="\0"*(self.format.structsize-len(self.data))
+                self.values=list(struct.unpack(self.format.fmt,self.data[0:self.format.structsize]))
+            if self.datasize>self.format.structsize:
+                self.parseExtra(self.data[self.format.structsize:])
+
+    def unserializeExtra(self,format,data):
+        if format.structsize<=len(data):
+            vals=struct.unpack(format.fmt,data[0:format.structsize])
+            print "new vals=%s" % str(vals)
+            self.values.extend(vals)
+            newformat=copy.deepcopy(self.format)
+            newformat.extend(format)
+            self.format=newformat
+
+
+    def parseExtra(self,data):
+        """Hook for subclasses to handle extra data in the record that
+        isn't specified by the format statement."""
+        self.unhandleddata=data
+        pass
+
+    def parseList(self,fmt,count,data,start):
+        fmt="<%d%s" % (count,fmt)
+        size=struct.calcsize(fmt)
+        vals=list(struct.unpack(fmt,data[start:start+size]))
+        #print "vals fmt=%s size=%d: %s" % (fmt,len(vals),str(vals))
+        start+=size
+        return (start,vals)
+
+    def parsePoints(self,fmt,count,data,start):
+        fmt="<%d%s" % ((2*count),fmt)
+        size=struct.calcsize(fmt)
+        vals=struct.unpack(fmt,data[start:start+size])
+        pairs=[(vals[i],vals[i+1]) for i in range(0,len(vals),2)]
+        #print "points size=%d: %s" % (len(pairs),pairs)
+        start+=size
+        return (start,pairs)
+            
+    def serialize(self,fh):
+        fh.write(struct.pack("<ii",self.iType,self.nSize))
+        fmt=self.format.fmt[1:] # get all the characters after the leading <
+        for f,val in zip(fmt,self.values):
+            f="<%s" % f # must be written little endian
+            fh.write(struct.pack(f,val))
+        self.serializeExtra(fh)
+
+    def serializeExtra(self,fh):
+        """This is for special cases, like writing text or lists.  If
+        this is not overridden by a subclass method, it will write out
+        anything in the self.unhandleddata string."""
+        if self.unhandleddata:
+            fh.write(self.unhandleddata)
+            
+
+    def serializeList(self,fh,fmt,vals):
+        fmt="<%s" % fmt
+        for val in vals:
+            fh.write(struct.pack(fmt,val))
+
+    def serializePoints(self,fh,fmt,pairs):
+        fmt="<2%s" % fmt
+        for pair in pairs:
+            fh.write(struct.pack(fmt,pair[0],pair[1]))
+            
+
+    def str_extra(self):
+        """Hook to print out extra data that isn't in the format"""
+        return ""
+
+    def str_color(self,val):
+        return "red=0x%02x green=0x%02x blue=0x%02x" % ((val&0xff),((val&0xff00)>8),((val&0xff0000)>16))
+    
+    def str_details(self):
+        txt=StringIO()
+
+        # EMR_UNKNOWN objects don't have a typedef, so only process
+        # those that do
+        if self.format.typedef:
+            #print "typedef=%s" % str(self.format.typedef)
+            for typecode,name in self.format.typedef:
+                names=self.format.mangle(typecode,name)
+                if len(names)>1:
+                    txt.write("\t%-20s: %s\n" % (name," ".join(["%s=%s" % (subname.replace(name,''),EMR_UNKNOWN.__getattr__(self,subname)) for subname in names])))
+                else:
+                    val=EMR_UNKNOWN.__getattr__(self,name)
+                    if name.endswith("Color"):
+                        val=self.str_color(val)
+                    txt.write("\t%-20s: %s\n" % (name,val))
+        txt.write(self.str_extra())
+        return txt.getvalue()
+
+    def __str__(self):
+        ret=""
+        details=self.str_details()
+        if details:
+            ret=os.linesep
+        return "**%s: iType=%s nSize=%s  struct='%s' size=%d\n%s%s" % (self.__class__.__name__,self.iType,self.nSize,self.format.fmt,self.format.structsize,details,ret)
+        return 
+
+
+# Collection of classes
+
+class EMR:
+
+    class HEADER(EMR_UNKNOWN):
+        """Header has different fields depending on the version of
+        windows.  Also note that if offDescription==0, there is no
+        description string."""
+
+        emr_id=1
+        
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('RECTL','rclFrame'),('i','dSignature'),('i','nVersion'),('i','nBytes'),('i','nRecords'),('h','nHandles'),('h','sReserved'),('i','nDescription'),('i','offDescription'),('i','nPalEntries'),('SIZEL','szlDevice'),('SIZEL','szlMillimeters')])
+            self.description=None
+
+        def parseExtra(self,data):
+            print "found %d extra bytes." % len(data)
+
+            # subtract 8because iType and nSize are always read
+            # separately
+            descriptionStart=self.offDescription-8-self.format.structsize
+
+            dataend=descriptionStart
+            if dataend<=0:
+                dataend=len(data)
+            count=dataend
+            print "dataend=%d count=%d len=%d" % (dataend,count,len(data))
+
+            start=0
+            new_typedefs=[
+                [('i','cbPixelFormat'),('i','offPixelFormat'),('i','bOpenGL')],
+                [('SIZEL','szlMicrometers')]
+                ]
+            for typedef in new_typedefs:
+                format=EMR_FORMAT(-1,typedef)
+                print "start=%d dataend=%d count=%d" % (start,dataend,count)
+                if start+format.structsize<=count:
+                    self.unserializeExtra(format,data[start:start+format.structsize])
+                    start+=format.structsize
+            
+            print "bOpenGL=%d" % self.bOpenGL
+            print "szlMicrometerscx=%d" % self.szlMicrometerscx
+
+            if descriptionStart>0:
+                count=len(data)-descriptionStart
+                print "remaining: start=%d count=%d" % (descriptionStart,count)
+                txt=data[descriptionStart:descriptionStart+count]
+                print "str: %s" % (txt.decode())
+                self.description=txt
+
+        def serializeExtra(self,fh):
+            if self.description:
+                fh.write(self.description)
+
+
+
+    class POLYBEZIER(EMR_UNKNOWN):
+        emr_id=2
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','cptl')])
+
+        def parseExtra(self,data):
+            print "found %d extra bytes." % len(data)
+
+            start=0
+            start,self.aptl=self.parsePoints("i",self.cptl,data,start)
+            #print "apts size=%d: %s" % (len(self.apts),self.apts)
+
+        def serializeExtra(self,fh):
+            self.serializePoints(fh,"i",self.aptl)
+
+        def str_extra(self):
+            txt=StringIO()
+            start=0
+            txt.write("\tpoints: %s\n" % str(self.aptl))
+                    
+            return txt.getvalue()
+
+    class POLYGON(POLYBEZIER):
+        emr_id=3
+        pass
+
+    class POLYLINE(POLYBEZIER):
+        emr_id=4
+        pass
+
+    class POLYBEZIERTO(POLYBEZIER):
+        emr_id=5
+        pass
+
+    class POLYLINETO(POLYBEZIER):
+        emr_id=6
+        pass
+    
+
+
+    class POLYPOLYLINE(EMR_UNKNOWN):
+        emr_id=7
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','nPolys'),('i','cptl')])
+
+        def parseExtra(self,data):
+            print "found %d extra bytes." % len(data)
+
+            start=0
+            start,self.aPolyCounts=self.parseList("i",self.nPolys,data,start)
+            #print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
+
+            start,self.aptl=self.parsePoints("i",self.cptl,data,start)
+            #print "apts size=%d: %s" % (len(self.apts),self.apts)
+
+        def serializeExtra(self,fh):
+            self.serializeList(fh,"i",self.aPolyCounts)
+            self.serializePoints(fh,"i",self.aptl)
+
+        def str_extra(self):
+            txt=StringIO()
+            start=0
+            for n in range(self.nPolys):
+                txt.write("\tPolygon %d: %d points\n" % (n,self.aPolyCounts[n]))
+                txt.write("\t\t%s\n" % str(self.aptl[start:start+self.aPolyCounts[n]]))
+                start+=self.aPolyCounts[n]
+                    
+            return txt.getvalue()
+
+    class POLYPOLYGON(POLYPOLYLINE):
+        emr_id=8
+        pass
+
+
+
+
+    class SETWINDOWEXTEX(EMR_UNKNOWN):
+        emr_id=9
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('SIZEL','szlExtent')])
+
+
+    class SETWINDOWORGEX(EMR_UNKNOWN):
+        emr_id=10
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('POINTL','ptlOrigin')])
+
+
+    class SETVIEWPORTEXTEX(SETWINDOWEXTEX):
+        emr_id=11
+        pass
+
+
+    class SETVIEWPORTORGEX(SETWINDOWORGEX):
+        emr_id=12
+        pass
+
+
+    class SETBRUSHORGEX(SETWINDOWORGEX):
+        emr_id=13
+        pass
+
+
+    class EOF(EMR_UNKNOWN):
+        emr_id=14
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','nPalEntries'),('i','offPalEntries'),('i','nSizeLast')])
+
+
+    class SETPIXELV(EMR_UNKNOWN):
+        emr_id=15
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('POINTL','ptlPixel'),('i','crColor')])
+
+
+    class SETMAPPERFLAGS(EMR_UNKNOWN):
+        emr_id=16
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','dwFlags')])
+
+
+    class SETMAPMODE(EMR_UNKNOWN):
+        emr_id=17
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','iMode')])
+
+            
+    class SETBKMODE(SETMAPMODE):
+        emr_id=18
+        pass
+
+            
+    class SETPOLYFILLMODE(SETMAPMODE):
+        emr_id=19
+        pass
+
+            
+    class SETROP2(SETMAPMODE):
+        emr_id=20
+        pass
+
+            
+    class SETSTRETCHBLTMODE(SETMAPMODE):
+        emr_id=21
+        pass
+
+            
+    class SETTEXTALIGN(SETMAPMODE):
+        emr_id=22
+        pass
+
+            
+#define EMR_SETCOLORADJUSTMENT	23
+
+    class SETTEXTCOLOR(EMR_UNKNOWN):
+        emr_id=24
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','crColor')])
+
+
+    SETBKCOLOR = SETTEXTCOLOR
+    SETBKCOLOR.emr_id=25
+
+#define EMR_OFFSETCLIPRGN	26
+
+
+    class MOVETOEX(EMR_UNKNOWN):
+        emr_id=27
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('POINTL','ptl')])
+
+
+#define EMR_SETMETARGN	28
+#define EMR_EXCLUDECLIPRECT	29
+#define EMR_INTERSECTCLIPRECT	30
+
+    class SCALEVIEWPORTEXTEX(EMR_UNKNOWN):
+        emr_id=31
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','xNum'),('i','xDenom'),('i','yNum'),('i','yDenom')])
+
+    class SCALEWINDOWEXTEX(SCALEVIEWPORTEXTEX):
+        emr_id=32
+        pass
+
+
+    class SAVEDC(EMR_UNKNOWN):
+        emr_id=33
+        pass
+
+    class RESTOREDC(EMR_UNKNOWN):
+        emr_id=34
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','iRelative')])
+
+
+    class SETWORLDTRANSFORM(EMR_UNKNOWN):
+        emr_id=35
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('XFORM','xform')])
+
+    class MODIFYWORLDTRANSFORM(EMR_UNKNOWN):
+        emr_id=36
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('XFORM','xform'),('i','iMode')])
+
+
+    class SELECTOBJECT(EMR_UNKNOWN):
+        emr_id=37
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihObject')])
+
+
+    # Note: a line will still be drawn when the linewidth==0.  To force an
+    # invisible line, use style=PS_NULL
+    class CREATEPEN(EMR_UNKNOWN):
+        emr_id=38
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihPen'),('LOGPEN','lopn')])
+
+
+    class CREATEBRUSHINDIRECT(EMR_UNKNOWN):
+        emr_id=39
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihBrush'),('I','lbStyle'),('i','lbColor'),('I','lbHatch')])
+
+
+    class DELETEOBJECT(SELECTOBJECT):
+        emr_id=40
+        pass
+
+
+    class ANGLEARC(EMR_UNKNOWN):
+        emr_id=41
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('POINTL','ptlCenter'),('i','nRadius'),('f','eStartAngle'),('f','eSweepAngle')])
+
+
+    class ELLIPSE(EMR_UNKNOWN):
+        emr_id=42
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBox')])
+
+
+    class RECTANGLE(ELLIPSE):
+        emr_id=43
+        pass
+
+
+    class ROUNDRECT(EMR_UNKNOWN):
+        emr_id=44
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBox'),('SIZEL','szlCorner')])
+
+
+    class ARC(EMR_UNKNOWN):
+        emr_id=45
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBox'),('POINTL','ptlStart'),('POINTL','ptlEnd')])
+
+    class CHORD(ARC):
+        emr_id=46
+        pass
+
+
+    class PIE(ARC):
+        emr_id=47
+        pass
+
+
+    class SELECTPALLETE(EMR_UNKNOWN):
+        emr_id=48
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihPal')])
+        
+
+#define EMR_CREATEPALETTE	49
+#define EMR_SETPALETTEENTRIES	50
+#define EMR_RESIZEPALETTE	51
+#define EMR_REALIZEPALETTE	52
+#define EMR_EXTFLOODFILL	53
+
+
+    class LINETO(MOVETOEX):
+        emr_id=54
+        pass
+
+
+    class ARCTO(ARC):
+        emr_id=55
+        pass
+
+
+#define EMR_POLYDRAW	56
+
+
+    class SETARCDIRECTION(EMR_UNKNOWN):
+        emr_id=57
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','iArcDirection')])
+        
+
+
+#define EMR_SETMITERLIMIT	58
+
+
+    class BEGINPATH(EMR_UNKNOWN):
+        emr_id=59
+        pass
+
+
+    class ENDPATH(EMR_UNKNOWN):
+        emr_id=60
+        pass
+
+
+    class CLOSEFIGURE(EMR_UNKNOWN):
+        emr_id=61
+        pass
+
+
+    class FILLPATH(EMR_UNKNOWN):
+        emr_id=62
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds')])
+        
+
+    class STROKEANDFILLPATH(FILLPATH):
+        emr_id=63
+        pass
+
+
+    class STROKEPATH(FILLPATH):
+        emr_id=64
+        pass
+
+
+    class FLATTENPATH(EMR_UNKNOWN):
+        emr_id=65
+        pass
+
+
+    class WIDENPATH(EMR_UNKNOWN):
+        emr_id=66
+        pass
+
+
+#define EMR_SELECTCLIPPATH	67
+
+
+    class ABORTPATH(EMR_UNKNOWN):
+        emr_id=68
+        pass
+
+
+#define EMR_GDICOMMENT	70
+#define EMR_FILLRGN	71
+#define EMR_FRAMERGN	72
+#define EMR_INVERTRGN	73
+#define EMR_PAINTRGN	74
+#define EMR_EXTSELECTCLIPRGN	75
+#define EMR_BITBLT	76
+#define EMR_STRETCHBLT	77
+#define EMR_MASKBLT	78
+#define EMR_PLGBLT	79
+#define EMR_SETDIBITSTODEVICE	80
+#define EMR_STRETCHDIBITS	81
+#define EMR_EXTCREATEFONTINDIRECTW	82
+#define EMR_EXTTEXTOUTA	83
+#define EMR_EXTTEXTOUTW	84
+
+    class POLYBEZIER16(EMR_UNKNOWN):
+        emr_id=85
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','cpts')])
+
+        def parseExtra(self,data):
+            print "found %d extra bytes." % len(data)
+
+            start=0
+            start,self.apts=self.parsePoints("h",self.cpts,data,start)
+            #print "apts size=%d: %s" % (len(self.apts),self.apts)
+
+        def serializeExtra(self,fh):
+            self.serializePoints(fh,"h",self.apts)
+
+        def str_extra(self):
+            txt=StringIO()
+            start=0
+            txt.write("\tpoints: %s\n" % str(self.apts))
+                    
+            return txt.getvalue()
+
+    class POLYGON16(POLYBEZIER16):
+        emr_id=86
+        pass
+
+    class POLYLINE16(POLYBEZIER16):
+        emr_id=87
+        pass
+
+    class POLYBEZIERTO16(POLYBEZIER16):
+        emr_id=88
+        pass
+
+    class POLYLINETO16(POLYBEZIER16):
+        emr_id=89
+        pass
+    
+
+
+    class POLYPOLYLINE16(EMR_UNKNOWN):
+        emr_id=90
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','nPolys'),('i','cpts')])
+
+        def parseExtra(self,data):
+            print "found %d extra bytes." % len(data)
+
+            start=0
+            start,self.aPolyCounts=self.parseList("i",self.nPolys,data,start)
+            #print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
+
+            start,self.apts=self.parsePoints("h",self.cpts,data,start)
+            #print "apts size=%d: %s" % (len(self.apts),self.apts)
+
+        def serializeExtra(self,fh):
+            self.serializeList(fh,"i",self.aPolyCounts)
+            self.serializePoints(fh,"h",self.apts)
+
+        def str_extra(self):
+            txt=StringIO()
+            start=0
+            for n in range(self.nPolys):
+                txt.write("\tPolygon %d: %d points\n" % (n,self.aPolyCounts[n]))
+                txt.write("\t\t%s\n" % str(self.apts[start:start+self.aPolyCounts[n]]))
+                start+=self.aPolyCounts[n]
+                    
+            return txt.getvalue()
+
+    class POLYPOLYGON16(POLYPOLYLINE16):
+        emr_id=91
+        pass
+
+#define EMR_POLYDRAW16	92
+#define EMR_CREATEMONOBRUSH	93
+#define EMR_CREATEDIBPATTERNBRUSHPT	94
+#define EMR_EXTCREATEPEN	95
+#define EMR_POLYTEXTOUTA	96
+#define EMR_POLYTEXTOUTW	97
+#define EMR_SETICMMODE	98
+#define EMR_CREATECOLORSPACE	99
+#define EMR_SETCOLORSPACE	100
+#define EMR_DELETECOLORSPACE	101
+#define EMR_GLSRECORD	102
+#define EMR_GLSBOUNDEDRECORD	103
+#define EMR_PIXELFORMAT 104
+
+
+# Set up the mapping of ids to classes for all of the record types in
+# the EMR class.
+for name in dir(EMR):
+    #print name
+    cls=getattr(EMR,name,None)
+    if cls and callable(cls) and issubclass(cls,EMR_UNKNOWN):
+        #print "subclass! id=%d %s" % (cls.emr_id,str(cls))
+        emrmap[cls.emr_id]=cls
+
+class EMF:
+    def __init__(self):
+        self.filename=None
+        self.dc=DC()
+        self.record=[]
+
+    def load(self,filename=None):
+        if filename:
+            self.filename=filename
+
+        if self.filename:
+            fh=open(self.filename)
+            self.unserialize(fh)
+
+    def unserialize(self,fh):
+        try:
+            count=1
+            while count>0:
+                data=fh.read(8)
+                count=len(data)
+                if count>0:
+                    (iType,nSize)=struct.unpack("<ii",data)
+                    print "EMF:  iType=%d nSize=%d" % (iType,nSize)
+
+                    if iType in emrmap:
+                        e=emrmap[iType]()
+                    else:
+                        e=EMR_UNKNOWN()
+
+                    e.unserialize(fh,iType,nSize)
+                    self.record.append(e)
+                    print e
+                
+        except EOFError:
+            pass
+
+    def save(self,filename=None):
+        if filename:
+            self.filename=filename
+
+        if self.filename:
+            fh=open(self.filename,"wb")
+            self.serialize(fh)
+            fh.close()
+                
+
+    def serialize(self,fh):
+        for e in self.record:
+            e.serialize(fh)
+
+
+
+##    # Do some optimization here, like convert to 16 bit values if possible, and convert to a rectangle if it is a rectangle
+##    def Polygon(self,points):
+##        if len(points)==4:
+##            if points[0][0]==points[1][0] and points[2][0]==points[3][0] and points[0][1]==points[3][1] and points[1][1]==points[2][1]:
+##                print "converting to rectangle, option 1:"
+##                pyemf.Rectangle(self.dc,points[0][0],points[0][1],points[2][0],points[2][1])
+##                return
+##            elif points[0][1]==points[1][1] and points[2][1]==points[3][1] and points[0][0]==points[3][0] and points[1][0]==points[2][0]:
+##                print "converting to rectangle, option 2:"
+##                pyemf.Rectangle(self.dc,points[0][0],points[0][1],points[2][0],points[2][1])
+##                return
+
+    
+
+
+if __name__ == "__main__":
+    from optparse import OptionParser
+
+    parser=OptionParser(usage="usage: %prog [options] emf-files...")
+    (options, args) = parser.parse_args()
+
+    for filename in args:
+        e=EMF()
+        e.load(filename)
+        e.save(filename+".out")

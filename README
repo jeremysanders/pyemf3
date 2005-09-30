@@ -1,0 +1,154 @@
+pyemf 2.0.0b1
+29 September 2005
+Copyright (c) 2005 Rob McMullen (robm@users.sourceforge.net)
+
+http://pyemf.sourceforge.net/
+
+
+
+ABSTRACT
+========
+
+pyemf is a pure python module that provides bindings for an ECMA-234
+compliant vector graphics library.  ECMA-234 is the published
+interface for the Windows GDI used in the Microsoft windows
+environment and, more importantly, natively supported by the
+OpenOffice suite of tools.
+
+http://www.ecma-international.org/publications/standards/Ecma-234.htm
+
+
+PREREQUISITES
+=============
+
+python (tested under 2.3 and 2.4; should work under earlier versions)
+
+
+QUICK INSTALL
+=============
+
+python setup.py install
+
+Yep, that's pretty much it.
+
+
+
+BACKGROUND
+==========
+
+I needed to have some way to generate some reports with graphics, and
+I needed to be able to email them to people so that the could cut out
+some graphics and paste them into powerpoint slides.  My one real
+requirement was vector graphics so that the resuling powerpoint
+wouldn't look nasty when the graphics were resized. Initially thought
+about HTML, but it's inconvienent emailing a zip file full of multiple
+files.  There is a format called "MHTML" that allows images and text
+to be included in a single file, but it is non-standard.  I then
+thought about PDF and EPS, and went down that road for a while with
+ReportLab (http://www.reportlab.org) and Matplotlib
+(http://matplotlib.sourceforge.net/) and got it to generate documents.
+But, the PDF (or at least Adobe Reader on Windows) has the restriction
+that you can't copy EPS figures from within a PDF and paste them
+anywhere.  So, that turned out not to be a workable solution.
+
+Not knowing anything about Windows graphics files, I stumbled upon
+libEMF (http://libemf.sourceforge.net) and searched in vain for a
+python binding for libEMF.  Not having found one, I wrote pyemf 1.0 to
+fill this gap, but decided to write pyemf 2.0 as a pure python
+implementation before even officially releasing pyemf 1.0.  That means
+that all the time I spent building pyemf 1.0 really became an exercise
+to learn how SWIG (http://www.swig.org) works.  But, that's OK,
+because there were a few features left out of libEMF that I can now
+add in without waiting for them to be added to libEMF.
+
+So, using modified versions of PyRTF (http://pyrtf.sourceforge.net)
+and Matplotlib, I can now generate RTF documents that include vector
+graphics.  These documents are modifiable by both Microsoft Word and
+OpenOffice Writer, satisfying the need to be cross platform.
+
+I suppose when SVG is understood by Word and OpenOffice, EMF will
+become unnecessary, but this can fill the void in the meantime.
+
+
+
+FEATURES
+========
+
+Most of the methods of ECMA-234 are supported by pyemf.  Exceptions
+are noted below, but generally the font support is limited in pyemf.
+
+
+
+KNOWN ISSUES
+============
+
+-- Wide character functions aren't supported
+
+It wasn't a priority for me for the first release, but patches are
+welcome.
+
+
+-- Text metrics functions are stubbed out
+
+A full GDI implementation would include font metrics such that fine
+grained control over glyph placement is available.  To really do text
+extents properly, a complete font metrics package would need to be
+added.  This requires a module that could link to something like
+freetype.  There is a freetype module included in matplotlib that I
+may look at for some future release, and in fact for my matplotlib
+modifications, I've used the freetype module with a bit of hackery to
+be able to place text strings in relation to one another.
+
+So, only the basics of font support are included.  It seems to be a
+bit renderer dependent as to how the fonts will be chosen based on the
+specifications to CreateFontA.  For example, what happens when you
+request a font that isn't available on your target computer?
+
+Comparing the output on PowerPoint vs OpenOffice Impress seems to show
+that fonts render about the same, but in terms of precisely placing
+strings of text in relation to other strings (e.g. knowing where a
+string ends so you could append a string right after that), it seems
+that we're a bit out of luck for the moment unless we can integrate it
+with some external library for metrics.
+
+I'm still needing to do more research before I add font extents to
+pyemf.  If you're curious and want to figure out how this stuff works
+in GDI, the prime suspect is the function GetTextExtentPoint32A(),
+which should measure the width and height of a string.  But also of
+interest are how CreateFont and CreateFontIndirect and how they
+specify fonts.
+
+
+
+
+EXAMPLE
+=======
+
+Here's a simple program (available as test1.py in the distribution)
+that connects opposite corners of an 8in by 6in rectangle with lines:
+
+#!/usr/bin/python
+
+import pyemf
+
+width=8
+height=6
+dpi=300
+
+emf=pyemf.EMF(width,height,dpi)
+thin=emf.CreatePen(PS_SOLID,1,(0x00,0x00,0x00))
+emf.SelectObject(thin)
+emf.Polyline([(0,0),(width*dpi,height*dpi)])
+emf.Polyline([(0,height*dpi),(width*dpi,0)])
+emf.save("test1.emf")
+
+
+
+DISCLAIMER
+==========
+
+pyemf, Copyright (c) 2005 Rob McMullen (robm@users.sourceforge.net)
+
+pyemf comes with ABSOLUTELY NO WARRANTY; for details see the
+file COPYING included in the source distribution, or see the web site
+http://www.gnu.org/copyleft/lesser.html for more information.
