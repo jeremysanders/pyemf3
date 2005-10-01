@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import os,sys,re
 import struct
@@ -21,7 +21,11 @@ GDI_typedefs={
     'POINTL':  (('i','x'),('i','y')),
     'RECTL':   (('i','left'),('i','top'),('i','right'),('i','bottom')),
     'LOGPEN':  (('i','style'),('POINTL','width'),('i','color')),
-    'XFORM':   (('f','eM11'),('f','eM12'),('f','eM21'),('f','eM22'),('f','eDx'),('f','eDy')),
+    'XFORM':   (('f','eM11'),('f','eM12'),
+                ('f','eM21'),('f','eM22'),
+                ('f','eDx'),('f','eDy')),
+    'EMRTEXT': (('POINTL','ptlReference'),('i','nChars'),('i','offString'),
+                ('i','fOptions'),('RECTL','rcl'),('i','offDx')),
 }
 
 class DC:
@@ -65,7 +69,7 @@ class EMR_FORMAT:
             if typecode in GDI_typedefs:
                 for subtype,name in GDI_typedefs[typecode]:
                     if self.debug: print "  found subtype=%s prefix=%s name=%s" % (subtype,prefix,name)
-                    mangled=self.mangle(subtype,prefix+name,mangled)
+                    mangled=self.mangle(subtype,prefix+"_"+name,mangled)
         else:
             #print mangled
             if mangled == None: mangled=[]
@@ -84,7 +88,7 @@ class EMR_FORMAT:
     def setFormatItem(self,typecode,name):
         if len(typecode)>1:
             if typecode in GDI_typedefs:
-                self.setFormat(GDI_typedefs[typecode],name)
+                self.setFormat(GDI_typedefs[typecode],name+"_")
         else:
             self.appendFormat(typecode,name)
 
@@ -115,10 +119,11 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
     def __init__(self,typeid=0,typedef=None):
         self.iType=typeid
         self.nSize=0
+        self.values=[] # list of values parsed from the input stream
+        
         self.datasize=0
         self.data=None
         self.unhandleddata=None
-        self.values=[]
 
         #self.format=EMR_FORMAT(typeid,typedef)
         self.format=getFormat(typeid,typedef)
@@ -151,6 +156,7 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
             if self.datasize>self.format.structsize:
                 self.parseExtra(self.data[self.format.structsize:])
 
+    # unserializeExtend
     def unserializeExtra(self,format,data):
         if format.structsize<=len(data):
             vals=struct.unpack(format.fmt,data[0:format.structsize])
@@ -228,7 +234,7 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
             for typecode,name in self.format.typedef:
                 names=self.format.mangle(typecode,name)
                 if len(names)>1:
-                    txt.write("\t%-20s: %s\n" % (name," ".join(["%s=%s" % (subname.replace(name,''),EMR_UNKNOWN.__getattr__(self,subname)) for subname in names])))
+                    txt.write("\t%-20s: %s\n" % (name," ".join(["%s=%s" % (subname.replace(name+"_",''),EMR_UNKNOWN.__getattr__(self,subname)) for subname in names])))
                 else:
                     val=EMR_UNKNOWN.__getattr__(self,name)
                     if name.endswith("Color"):
@@ -287,7 +293,7 @@ class EMR:
                     start+=format.structsize
             
             print "bOpenGL=%d" % self.bOpenGL
-            print "szlMicrometerscx=%d" % self.szlMicrometerscx
+            print "szlMicrometers_cx=%d" % self.szlMicrometers_cx
 
             if descriptionStart>0:
                 count=len(data)-descriptionStart
@@ -670,8 +676,52 @@ class EMR:
 #define EMR_SETDIBITSTODEVICE	80
 #define EMR_STRETCHDIBITS	81
 #define EMR_EXTCREATEFONTINDIRECTW	82
-#define EMR_EXTTEXTOUTA	83
-#define EMR_EXTTEXTOUTW	84
+
+
+    class EXTTEXTOUTA(EMR_UNKNOWN):
+        emr_id=83
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','iGraphicsMode'),('f','exScale'),('f','eyScale'),('EMRTEXT','emrtext')])
+
+        def parseExtra(self,data):
+            print "found %d extra bytes." % len(data)
+
+            start=0
+            print "offDx=%d offString=%d" % (self.emrtext_offDx,self.emrtext_offString)
+            if self.emrtext_offDx>0:
+                start,self.dx=self.parseList("i",self.emrtext_offDx,data,start)
+            else:
+                self.dx=[]
+            if self.emrtext_offString>0:
+                self.string=data[start:]
+            else:
+                self.string=""
+
+        # FIXME: must recalculate length of record, and offsets to
+        # string and dx list.
+
+        def serializeExtra(self,fh):
+            if self.emrtext_offDx>0:
+                self.serializeList(fh,"i",self.dx)
+            if self.emrtext_offString>0:
+                # FIXME: description length must be padded to length
+                # multiple of 4
+                fh.write(self.string)
+
+        def str_extra(self):
+            txt=StringIO()
+            txt.write("\tdx: %s\n" % str(self.dx))
+            txt.write("\tstring: %s\n" % str(self.string))
+                    
+            return txt.getvalue()
+
+
+    class EXTTEXTOUTW(EMR_UNKNOWN):
+        emr_id=84
+        pass
+
+
+
 
     class POLYBEZIER16(EMR_UNKNOWN):
         emr_id=85
@@ -819,6 +869,7 @@ class EMF:
     def serialize(self,fh):
         for e in self.record:
             e.serialize(fh)
+            #print e
 
 
 
