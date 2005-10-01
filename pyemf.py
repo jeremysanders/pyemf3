@@ -125,7 +125,6 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
         self.data=None
         self.unhandleddata=None
 
-        #self.format=EMR_FORMAT(typeid,typedef)
         self.format=getFormat(typeid,typedef)
 
     def __getattr__(self,name):
@@ -138,6 +137,9 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
 
 
     def unserialize(self,fh,itype=-1,nsize=-1):
+        """Read data from the file object and, using the format
+        structure defined by the subclass, parse the data and store it
+        in self.values[] list."""
         if itype>0:
             self.iType=itype
             self.nSize=nsize
@@ -154,26 +156,32 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
                     self.data+="\0"*(self.format.structsize-len(self.data))
                 self.values=list(struct.unpack(self.format.fmt,self.data[0:self.format.structsize]))
             if self.datasize>self.format.structsize:
-                self.parseExtra(self.data[self.format.structsize:])
+                self.unserializeExtra(self.data[self.format.structsize:])
 
-    # unserializeExtend
-    def unserializeExtra(self,format,data):
+    def unserializeExtend(self,format,data):
+        """Extend the format structure with the specified format
+        string and add the new data to self.values[].  The new format
+        structure is appended to the existing format structure so that
+        serialization of this new data will happen automatically."""
         if format.structsize<=len(data):
             vals=struct.unpack(format.fmt,data[0:format.structsize])
             print "new vals=%s" % str(vals)
             self.values.extend(vals)
+
+            # Don't just append to the existing format, because this
+            # would mess up the caching of the format.  Copy it.
             newformat=copy.deepcopy(self.format)
             newformat.extend(format)
             self.format=newformat
 
 
-    def parseExtra(self,data):
+    def unserializeExtra(self,data):
         """Hook for subclasses to handle extra data in the record that
         isn't specified by the format statement."""
         self.unhandleddata=data
         pass
 
-    def parseList(self,fmt,count,data,start):
+    def unserializeList(self,fmt,count,data,start):
         fmt="<%d%s" % (count,fmt)
         size=struct.calcsize(fmt)
         vals=list(struct.unpack(fmt,data[start:start+size]))
@@ -181,7 +189,7 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
         start+=size
         return (start,vals)
 
-    def parsePoints(self,fmt,count,data,start):
+    def unserializePoints(self,fmt,count,data,start):
         fmt="<%d%s" % ((2*count),fmt)
         size=struct.calcsize(fmt)
         vals=struct.unpack(fmt,data[start:start+size])
@@ -267,7 +275,7 @@ class EMR:
             EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('RECTL','rclFrame'),('i','dSignature'),('i','nVersion'),('i','nBytes'),('i','nRecords'),('h','nHandles'),('h','sReserved'),('i','nDescription'),('i','offDescription'),('i','nPalEntries'),('SIZEL','szlDevice'),('SIZEL','szlMillimeters')])
             self.description=None
 
-        def parseExtra(self,data):
+        def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
 
             # subtract 8because iType and nSize are always read
@@ -289,7 +297,7 @@ class EMR:
                 format=EMR_FORMAT(-1,typedef)
                 print "start=%d dataend=%d count=%d" % (start,dataend,count)
                 if start+format.structsize<=count:
-                    self.unserializeExtra(format,data[start:start+format.structsize])
+                    self.unserializeExtend(format,data[start:start+format.structsize])
                     start+=format.structsize
             
             print "bOpenGL=%d" % self.bOpenGL
@@ -313,11 +321,11 @@ class EMR:
         def __init__(self):
             EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','cptl')])
 
-        def parseExtra(self,data):
+        def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
 
             start=0
-            start,self.aptl=self.parsePoints("i",self.cptl,data,start)
+            start,self.aptl=self.unserializePoints("i",self.cptl,data,start)
             #print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def serializeExtra(self,fh):
@@ -353,14 +361,14 @@ class EMR:
         def __init__(self):
             EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','nPolys'),('i','cptl')])
 
-        def parseExtra(self,data):
+        def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
 
             start=0
-            start,self.aPolyCounts=self.parseList("i",self.nPolys,data,start)
+            start,self.aPolyCounts=self.unserializeList("i",self.nPolys,data,start)
             #print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
 
-            start,self.aptl=self.parsePoints("i",self.cptl,data,start)
+            start,self.aptl=self.unserializePoints("i",self.cptl,data,start)
             #print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def serializeExtra(self,fh):
@@ -683,13 +691,13 @@ class EMR:
         def __init__(self):
             EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','iGraphicsMode'),('f','exScale'),('f','eyScale'),('EMRTEXT','emrtext')])
 
-        def parseExtra(self,data):
+        def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
 
             start=0
             print "offDx=%d offString=%d" % (self.emrtext_offDx,self.emrtext_offString)
             if self.emrtext_offDx>0:
-                start,self.dx=self.parseList("i",self.emrtext_offDx,data,start)
+                start,self.dx=self.unserializeList("i",self.emrtext_offDx,data,start)
             else:
                 self.dx=[]
             if self.emrtext_offString>0:
@@ -728,11 +736,11 @@ class EMR:
         def __init__(self):
             EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','cpts')])
 
-        def parseExtra(self,data):
+        def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
 
             start=0
-            start,self.apts=self.parsePoints("h",self.cpts,data,start)
+            start,self.apts=self.unserializePoints("h",self.cpts,data,start)
             #print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def serializeExtra(self,fh):
@@ -768,14 +776,14 @@ class EMR:
         def __init__(self):
             EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','nPolys'),('i','cpts')])
 
-        def parseExtra(self,data):
+        def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
 
             start=0
-            start,self.aPolyCounts=self.parseList("i",self.nPolys,data,start)
+            start,self.aPolyCounts=self.unserializeList("i",self.nPolys,data,start)
             #print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
 
-            start,self.apts=self.parsePoints("h",self.cpts,data,start)
+            start,self.apts=self.unserializePoints("h",self.cpts,data,start)
             #print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def serializeExtra(self,fh):
