@@ -252,8 +252,8 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
         format string, and also provide the opportunity to recalculate
         any changes in size that should be reflected in self.nSize
         before the record is written out."""
-        #if self.unhandleddata:
-        #    return len(self.unhandleddata)
+        if self.unhandleddata:
+            return len(self.unhandleddata)
         return 0
 
     def str_extra(self):
