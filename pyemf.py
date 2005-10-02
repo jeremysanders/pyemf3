@@ -26,6 +26,22 @@ GDI_typedefs={
                 ('f','eDx'),('f','eDy')),
     'EMRTEXT': (('POINTL','ptlReference'),('i','nChars'),('i','offString'),
                 ('i','fOptions'),('RECTL','rcl'),('i','offDx')),
+    'LOGFONTW':(('i','lfHeight'),('i','lfWidth'),
+                ('i','lfEscapement'),('i','lfOrientation'),('i','lfWeight'),
+                ('B','lfItalic'),('B','lfUnderline'),
+                ('B','lfStrikeOut'),('B','lfCharSet'),
+                ('B','lfOutPrecision'),('B','lfClipPrecision'),
+                ('B','lfQuality'),
+                ('B','lfPitchAndFamily'),('64s','lfFaceName')),
+    'PANOSE':  (('B','bFamilyType'),('B','bSerifStyle'),('B','bWeight'),
+                ('B','bProportion'),('B','bContrast'),
+                ('B','bStrokeVariation'),('B','bArmStyle'),
+                ('B','bLetterform'),('B','bMidline'),('B','bXHeight')),
+    'EXTLOGFONTW': (('LOGFONTW','elfLogFont'),
+                    ('128s','elfFullName'),('64s','elfStyle'),
+                    ('i','elfVersion'),('i','elfStyleSize'),
+                    ('i','elfMatch'),('i','elfReserved'),('i','elfVendorId'),
+                    ('i','elfCulture'),('PANOSE','elfPanose')),
 }
 
 
@@ -56,7 +72,8 @@ class EMR_FORMAT:
     def __init__(self,emr_id,typedef):
         self.typedef=typedef
         self.id=emr_id
-        self.fmt="<" # little endian
+        self.fmtlist=[] # list of typecodes
+        self.fmt="<" # string for pack/unpack.  little endian
         self.structsize=0
 
         self.names=[]
@@ -73,11 +90,10 @@ class EMR_FORMAT:
         default argument is actually a reference, and it is the same
         reference each time.  So, if you call this multiple times with
         a default argument, the same list gets appended to."""
-        if len(typecode)>1:
-            if typecode in GDI_typedefs:
-                for subtype,name in GDI_typedefs[typecode]:
-                    if self.debug: print "  found subtype=%s prefix=%s name=%s" % (subtype,prefix,name)
-                    mangled=self.mangle(subtype,prefix+"_"+name,mangled)
+        if typecode in GDI_typedefs:
+            for subtype,name in GDI_typedefs[typecode]:
+                if self.debug: print "  found subtype=%s prefix=%s name=%s" % (subtype,prefix,name)
+                mangled=self.mangle(subtype,prefix+"_"+name,mangled)
         else:
             #print mangled
             if mangled == None: mangled=[]
@@ -94,14 +110,14 @@ class EMR_FORMAT:
             raise AttributeError("format must be a list")
 
     def setFormatItem(self,typecode,name):
-        if len(typecode)>1:
-            if typecode in GDI_typedefs:
-                self.setFormat(GDI_typedefs[typecode],name+"_")
+        if typecode in GDI_typedefs:
+            self.setFormat(GDI_typedefs[typecode],name+"_")
         else:
             self.appendFormat(typecode,name)
 
     def appendFormat(self,typecode,name):
         self.fmt+=typecode
+        self.fmtlist.append(typecode)
         self.namepos[name]=len(self.names)
         self.names.append(name)
         self.structsize=struct.calcsize(self.fmt)
@@ -111,10 +127,8 @@ class EMR_FORMAT:
         """Append another format object onto this one.  Probably
         should operate on a copy of the object so that the
         format_cache isn't altered."""
-        i=1 # skip the other's leading '<'
-        for name in other.names:
-            self.appendFormat(other.fmt[i],name)
-            i+=1
+        for typecode,name in zip(other.fmtlist,other.names):
+            self.appendFormat(typecode,name)
         self.typedef.extend(other.typedef)
 
 
@@ -135,14 +149,42 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
 
         self.format=getFormat(typeid,typedef)
 
+
     def __getattr__(self,name):
+        """Return EMR attribute if the name exists in the typedef list
+        of the object.  This is only called when the standard
+        attribute lookup fails on this object, so we don't have to
+        handle the case where name is an actual attribute of self."""
         f=EMR_UNKNOWN.__getattribute__(self,'format')
-        if name in f.names:
-            v=EMR_UNKNOWN.__getattribute__(self,'values')
-            index=f.namepos[name]
-            return v[index]
+        try:
+            if name in f.names:
+                v=EMR_UNKNOWN.__getattribute__(self,'values')
+                index=f.namepos[name]
+                return v[index]
+        except IndexError:
+            raise IndexError("name=%s index=%d values=%s" % (name,index,str(v)))
         raise AttributeError("%s not defined in EMR object" % name)
 
+    def __setattr__(self,name,value):
+        """Set a value in the object, propagating through to
+        self.values[] if the name is in the typedef list."""
+        if hasattr(self,'format'):
+            f=EMR_UNKNOWN.__getattribute__(self,'format')
+            try:
+                if name in f.names:
+                    v=EMR_UNKNOWN.__getattribute__(self,'values')
+                    index=f.namepos[name]
+                    v[index]=value
+                else:
+                    # it's not an automatically serializable item, so store it.
+                    self.__dict__[name]=value
+            except IndexError:
+                raise IndexError("name=%s index=%d values=%s" % (name,index,str(v)))
+        else:
+            # We are very early-on in the initialization of the object
+            # if format doesn't exist yet.  So, just store it as a
+            # regular attribute.
+            self.__dict__[name]=value
 
     def unserialize(self,fh,itype=-1,nsize=-1):
         """Read data from the file object and, using the format
@@ -182,6 +224,12 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
             newformat.extend(format)
             self.format=newformat
 
+    def unserializeOffset(self,offset):
+        """Adjust offset to point to correct location in extra data.
+        Offsets in the EMR record are from the start of the record, so
+        we must subtract 8 bytes for iType and nSize, and also
+        subtract the size of the format structure."""
+        return offset-8-self.format.structsize
 
     def unserializeExtra(self,data):
         """Hook for subclasses to handle extra data in the record that
@@ -209,11 +257,16 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
     def serialize(self,fh):
         self.resize()
         fh.write(struct.pack("<ii",self.iType,self.nSize))
-        fmt=self.format.fmt[1:] # get all the characters after the leading <
-        for f,val in zip(fmt,self.values):
-            f="<%s" % f # must be written little endian
-            fh.write(struct.pack(f,val))
+        for typecode,val in zip(self.format.fmtlist,self.values):
+            fmt="<%s" % typecode # must be written little endian
+            #print "writing: fmt='%s' val='%s'" % (fmt,str(val))
+            fh.write(struct.pack(fmt,val))
         self.serializeExtra(fh)
+
+    def serializeOffset(self):
+        """Return the initial offset for any extra data that must be
+        written to the record.  See L{unserializeOffset}."""
+        return 8+self.format.structsize
 
     def serializeExtra(self,fh):
         """This is for special cases, like writing text or lists.  If
@@ -311,7 +364,7 @@ class EMR:
 
             # subtract 8 because iType and nSize are always read
             # separately
-            descriptionStart=self.offDescription-8-self.format.structsize
+            descriptionStart=self.unserializeOffset(self.offDescription)
 
             dataend=descriptionStart
             if dataend<=0:
@@ -463,6 +516,9 @@ class EMR:
         emr_id=14
         def __init__(self):
             EMR_UNKNOWN.__init__(self,self.emr_id,[('i','nPalEntries'),('i','offPalEntries'),('i','nSizeLast')])
+            # I don't know if I have a broken example or what, but
+            # features.emf file only has a 12 byte long EOF record.
+            # OpenOffice seems to handle it, though.
 
 
     class SETPIXELV(EMR_UNKNOWN):
@@ -725,7 +781,18 @@ class EMR:
 #define EMR_PLGBLT	79
 #define EMR_SETDIBITSTODEVICE	80
 #define EMR_STRETCHDIBITS	81
-#define EMR_EXTCREATEFONTINDIRECTW	82
+
+
+
+    class EXTCREATEFONTINDIRECTW(EMR_UNKNOWN):
+        emr_id=82
+
+        # Note: all the strings here (font names, etc.) are unicode
+        # strings.
+        
+        def __init__(self):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihFont'),('EXTLOGFONTW','elfw')])
+
 
 
     class EXTTEXTOUTA(EMR_UNKNOWN):
@@ -736,29 +803,36 @@ class EMR:
             self.charsize=1
 
         def unserializeExtra(self,data):
-            print "found %d extra bytes." % len(data)
+            print "found %d extra bytes.  nChars=%d" % (len(data),self.emrtext_nChars)
 
             start=0
             print "offDx=%d offString=%d" % (self.emrtext_offDx,self.emrtext_offString)
+
+            # Note: offsets may appear before OR after string.  Don't
+            # assume they will appear first.
             if self.emrtext_offDx>0:
-                start,self.dx=self.unserializeList("i",self.emrtext_offDx,data,start)
+                start=self.unserializeOffset(self.emrtext_offDx)
+                start,self.dx=self.unserializeList("i",self.emrtext_nChars,data,start)
             else:
                 self.dx=[]
+                
             if self.emrtext_offString>0:
-                self.string=data[start:start+self.emrtext_nChars]
+                start=self.unserializeOffset(self.emrtext_offString)
+                self.string=data[start:start+(self.charsize*self.emrtext_nChars)]
             else:
                 self.string=""
 
         def sizeExtra(self):
-            offset=self.format.structsize
+            offset=self.serializeOffset()
             sizedx=0
             sizestring=0
+
             if len(self.dx)>0:
                 self.emrtext_offDx=offset
                 sizedx=struct.calcsize("i")*self.emrtext_nChars
                 offset+=sizedx
             if len(self.string)>0:
-                self.emrtext_nChars=len(self.string)
+                self.emrtext_nChars=len(self.string)/self.charsize
                 self.emrtext_offString=offset
                 sizestring=round4(self.charsize*self.emrtext_nChars)
                 
@@ -782,7 +856,7 @@ class EMR:
         emr_id=84
 
         def __init__(self):
-            EXTTEXTOUTA.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','iGraphicsMode'),('f','exScale'),('f','eyScale'),('EMRTEXT','emrtext')])
+            EMR.EXTTEXTOUTA.__init__(self)
             self.charsize=2
 
 
@@ -940,8 +1014,8 @@ class EMF:
 
     def serialize(self,fh):
         for e in self.record:
-            e.serialize(fh)
             #print e
+            e.serialize(fh)
 
 
 
