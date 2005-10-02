@@ -28,6 +28,14 @@ GDI_typedefs={
                 ('i','fOptions'),('RECTL','rcl'),('i','offDx')),
 }
 
+
+def round4(num):
+    """Round to the nearest multiple of 4 greater than or equal to the
+    given number.  EMF records are required to be aligned to 4 byte
+    boundaries."""
+    return ((num+3)/4)*4
+
+
 class DC:
     def __init__(self):
         self.x=0
@@ -199,6 +207,7 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
         return (start,pairs)
             
     def serialize(self,fh):
+        self.resize()
         fh.write(struct.pack("<ii",self.iType,self.nSize))
         fmt=self.format.fmt[1:] # get all the characters after the leading <
         for f,val in zip(fmt,self.values):
@@ -223,7 +232,29 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
         fmt="<2%s" % fmt
         for pair in pairs:
             fh.write(struct.pack(fmt,pair[0],pair[1]))
-            
+
+    def serializeString(self,fh,txt):
+        fh.write(txt)
+        extra=round4(len(txt))-len(txt)
+        if extra>0:
+            fh.write('\0'*extra)
+
+    def resize(self):
+        before=self.nSize
+        self.nSize=8+self.format.structsize+self.sizeExtra()
+        if before!=self.nSize:
+            print "resize: before=%d after=%d" % (before,self.nSize)
+            print self
+
+    def sizeExtra(self):
+        """Hook for subclasses before anything is serialized.  This is
+        used to return the size of any extra components not in the
+        format string, and also provide the opportunity to recalculate
+        any changes in size that should be reflected in self.nSize
+        before the record is written out."""
+        #if self.unhandleddata:
+        #    return len(self.unhandleddata)
+        return 0
 
     def str_extra(self):
         """Hook to print out extra data that isn't in the format"""
@@ -273,12 +304,12 @@ class EMR:
         
         def __init__(self):
             EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('RECTL','rclFrame'),('i','dSignature'),('i','nVersion'),('i','nBytes'),('i','nRecords'),('h','nHandles'),('h','sReserved'),('i','nDescription'),('i','offDescription'),('i','nPalEntries'),('SIZEL','szlDevice'),('SIZEL','szlMillimeters')])
-            self.description=None
+            self.description=''
 
         def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
 
-            # subtract 8because iType and nSize are always read
+            # subtract 8 because iType and nSize are always read
             # separately
             descriptionStart=self.offDescription-8-self.format.structsize
 
@@ -310,9 +341,11 @@ class EMR:
                 print "str: %s" % (txt.decode())
                 self.description=txt
 
+        def sizeExtra(self):
+            return round4(len(self.description))
+
         def serializeExtra(self,fh):
-            if self.description:
-                fh.write(self.description)
+            self.serializeString(fh,self.description)
 
 
 
@@ -327,6 +360,9 @@ class EMR:
             start=0
             start,self.aptl=self.unserializePoints("i",self.cptl,data,start)
             #print "apts size=%d: %s" % (len(self.apts),self.apts)
+
+        def sizeExtra(self):
+            return struct.calcsize("i")*2*self.cptl
 
         def serializeExtra(self,fh):
             self.serializePoints(fh,"i",self.aptl)
@@ -370,6 +406,10 @@ class EMR:
 
             start,self.aptl=self.unserializePoints("i",self.cptl,data,start)
             #print "apts size=%d: %s" % (len(self.apts),self.apts)
+
+        def sizeExtra(self):
+            return (struct.calcsize("i")*self.nPolys +
+                    struct.calcsize("i")*2*self.cptl)
 
         def serializeExtra(self,fh):
             self.serializeList(fh,"i",self.aPolyCounts)
@@ -476,8 +516,10 @@ class EMR:
             EMR_UNKNOWN.__init__(self,self.emr_id,[('i','crColor')])
 
 
-    SETBKCOLOR = SETTEXTCOLOR
-    SETBKCOLOR.emr_id=25
+    class SETBKCOLOR(SETTEXTCOLOR):
+        emr_id=25
+        pass
+
 
 #define EMR_OFFSETCLIPRGN	26
 
@@ -690,6 +732,8 @@ class EMR:
         emr_id=83
         def __init__(self):
             EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','iGraphicsMode'),('f','exScale'),('f','eyScale'),('EMRTEXT','emrtext')])
+            self.string=""
+            self.charsize=1
 
         def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
@@ -701,20 +745,30 @@ class EMR:
             else:
                 self.dx=[]
             if self.emrtext_offString>0:
-                self.string=data[start:]
+                self.string=data[start:start+self.emrtext_nChars]
             else:
                 self.string=""
 
-        # FIXME: must recalculate length of record, and offsets to
-        # string and dx list.
+        def sizeExtra(self):
+            offset=self.format.structsize
+            sizedx=0
+            sizestring=0
+            if len(self.dx)>0:
+                self.emrtext_offDx=offset
+                sizedx=struct.calcsize("i")*self.emrtext_nChars
+                offset+=sizedx
+            if len(self.string)>0:
+                self.emrtext_nChars=len(self.string)
+                self.emrtext_offString=offset
+                sizestring=round4(self.charsize*self.emrtext_nChars)
+                
+            return (sizedx+sizestring)
 
         def serializeExtra(self,fh):
             if self.emrtext_offDx>0:
                 self.serializeList(fh,"i",self.dx)
             if self.emrtext_offString>0:
-                # FIXME: description length must be padded to length
-                # multiple of 4
-                fh.write(self.string)
+                self.serializeString(fh,self.string)
 
         def str_extra(self):
             txt=StringIO()
@@ -724,9 +778,12 @@ class EMR:
             return txt.getvalue()
 
 
-    class EXTTEXTOUTW(EMR_UNKNOWN):
+    class EXTTEXTOUTW(EXTTEXTOUTA):
         emr_id=84
-        pass
+
+        def __init__(self):
+            EXTTEXTOUTA.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','iGraphicsMode'),('f','exScale'),('f','eyScale'),('EMRTEXT','emrtext')])
+            self.charsize=2
 
 
 
@@ -742,6 +799,9 @@ class EMR:
             start=0
             start,self.apts=self.unserializePoints("h",self.cpts,data,start)
             #print "apts size=%d: %s" % (len(self.apts),self.apts)
+
+        def sizeExtra(self):
+            return (struct.calcsize("h")*2*self.cpts)
 
         def serializeExtra(self,fh):
             self.serializePoints(fh,"h",self.apts)
@@ -785,6 +845,10 @@ class EMR:
 
             start,self.apts=self.unserializePoints("h",self.cpts,data,start)
             #print "apts size=%d: %s" % (len(self.apts),self.apts)
+
+        def sizeExtra(self):
+            return (struct.calcsize("i")*self.nPolys +
+                    struct.calcsize("h")*2*self.cpts)
 
         def serializeExtra(self,fh):
             self.serializeList(fh,"i",self.aPolyCounts)
