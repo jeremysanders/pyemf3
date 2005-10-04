@@ -257,10 +257,7 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
     def serialize(self,fh):
         self.resize()
         fh.write(struct.pack("<ii",self.iType,self.nSize))
-        for typecode,val in zip(self.format.fmtlist,self.values):
-            fmt="<%s" % typecode # must be written little endian
-            #print "writing: fmt='%s' val='%s'" % (fmt,str(val))
-            fh.write(struct.pack(fmt,val))
+        fh.write(struct.pack(self.format.fmt,*self.values))
         self.serializeExtra(fh)
 
     def serializeOffset(self):
