@@ -312,6 +312,14 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
 
     def str_color(self,val):
         return "red=0x%02x green=0x%02x blue=0x%02x" % ((val&0xff),((val&0xff00)>8),((val&0xff0000)>16))
+
+    def str_decode(self,typecode,name):
+        val=EMR_UNKNOWN.__getattr__(self,name)
+        if name.endswith("Color"):
+            val=self.str_color(val)
+        elif typecode.endswith("s"):
+            val=val.decode('utf-16')
+        return val
     
     def str_details(self):
         txt=StringIO()
@@ -325,9 +333,7 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
                 if len(names)>1:
                     txt.write("\t%-20s: %s\n" % (name," ".join(["%s=%s" % (subname.replace(name+"_",''),EMR_UNKNOWN.__getattr__(self,subname)) for subname in names])))
                 else:
-                    val=EMR_UNKNOWN.__getattr__(self,name)
-                    if name.endswith("Color"):
-                        val=self.str_color(val)
+                    val=self.str_decode(typecode,name)
                     txt.write("\t%-20s: %s\n" % (name,val))
         txt.write(self.str_extra())
         return txt.getvalue()
@@ -388,7 +394,7 @@ class EMR:
                 count=len(data)-descriptionStart
                 print "remaining: start=%d count=%d" % (descriptionStart,count)
                 txt=data[descriptionStart:descriptionStart+count]
-                print "str: %s" % (txt.decode())
+                print "str: %s" % (txt.decode('utf-16'))
                 self.description=txt
 
         def sizeExtra(self):
@@ -844,7 +850,7 @@ class EMR:
         def str_extra(self):
             txt=StringIO()
             txt.write("\tdx: %s\n" % str(self.dx))
-            txt.write("\tstring: %s\n" % str(self.string))
+            txt.write("\tstring: %s\n" % str(self.string.decode('utf-16')))
                     
             return txt.getvalue()
 
