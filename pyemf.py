@@ -32,13 +32,15 @@ GDI_typedefs={
                 ('B','lfStrikeOut'),('B','lfCharSet'),
                 ('B','lfOutPrecision'),('B','lfClipPrecision'),
                 ('B','lfQuality'),
-                ('B','lfPitchAndFamily'),('64s','lfFaceName')),
+                ('B','lfPitchAndFamily'),
+                ('64s','lfFaceName')), # really a 32 char unicode string
     'PANOSE':  (('B','bFamilyType'),('B','bSerifStyle'),('B','bWeight'),
                 ('B','bProportion'),('B','bContrast'),
                 ('B','bStrokeVariation'),('B','bArmStyle'),
                 ('B','bLetterform'),('B','bMidline'),('B','bXHeight')),
     'EXTLOGFONTW': (('LOGFONTW','elfLogFont'),
-                    ('128s','elfFullName'),('64s','elfStyle'),
+                    ('128s','elfFullName'), # really 64 char unicode string
+                    ('64s','elfStyle'), # really 32 char unicode string
                     ('i','elfVersion'),('i','elfStyleSize'),
                     ('i','elfMatch'),('i','elfReserved'),('i','elfVendorId'),
                     ('i','elfCulture'),('PANOSE','elfPanose')),
@@ -850,7 +852,10 @@ class EMR:
         def str_extra(self):
             txt=StringIO()
             txt.write("\tdx: %s\n" % str(self.dx))
-            txt.write("\tstring: %s\n" % str(self.string.decode('utf-16')))
+            if self.charsize==2:
+                txt.write("\tunicode string: %s\n" % str(self.string.decode('utf-16')))
+            else:
+                txt.write("\tascii string: %s\n" % str(self.string))
                     
             return txt.getvalue()
 
