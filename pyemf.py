@@ -1,9 +1,26 @@
 #!/usr/bin/env python
 
+"""
+
+Pure Python bindings for an
+U{ECMA-234<http://www.ecma-international.org/publications/standards/Ecma-234.htm
+>} compliant vector graphics library.  ECMA-234 is the published
+interface for the Windows GDI used in the Microsoft windows
+environment and, more importantly, natively supported by the
+U{OpenOffice<http://www.openoffice.org>} suite of tools.
+
+
+@author: Rob McMullen
+@version: 2.0.0b1
+
+
+"""
+
 import os,sys,re
 import struct
 from cStringIO import StringIO
 import copy
+
 
 __version__ = "2.0.0b1"
 __author__ = "Rob McMullen <robm@users.sourceforge.net>"
@@ -20,7 +37,7 @@ GDI_typedefs={
     'POINTS':  (('h','x'),('h','y')),
     'POINTL':  (('i','x'),('i','y')),
     'RECTL':   (('i','left'),('i','top'),('i','right'),('i','bottom')),
-    'LOGPEN':  (('i','style'),('POINTL','width'),('i','color')),
+    'LOGPEN':  (('i','style'),('i','width'),('i','unused'),('i','color')),
     'XFORM':   (('f','eM11'),('f','eM12'),
                 ('f','eM21'),('f','eM22'),
                 ('f','eDx'),('f','eDy')),
@@ -47,18 +64,160 @@ GDI_typedefs={
 }
 
 
+# mapping modes
+MM_TEXT = 1
+MM_LOMETRIC = 2
+MM_HIMETRIC = 3
+MM_LOENGLISH = 4
+MM_HIENGLISH = 5
+MM_TWIPS = 6
+MM_ISOTROPIC = 7
+MM_ANISOTROPIC = 8
+MM_MAX = MM_ANISOTROPIC
+
+# background modes
+TRANSPARENT = 1
+OPAQUE = 2
+BKMODE_LAST = 2
+
+# polyfill modes
+ALTERNATE = 1
+WINDING = 2
+POLYFILL_LAST = 2
+
+# line styles and options
+PS_SOLID         = 0x00000000
+PS_DASH          = 0x00000001
+PS_DOT           = 0x00000002
+PS_DASHDOT       = 0x00000003
+PS_DASHDOTDOT    = 0x00000004
+PS_NULL          = 0x00000005
+PS_INSIDEFRAME   = 0x00000006
+PS_USERSTYLE     = 0x00000007
+PS_ALTERNATE     = 0x00000008
+PS_STYLE_MASK    = 0x0000000f
+
+PS_ENDCAP_ROUND  = 0x00000000
+PS_ENDCAP_SQUARE = 0x00000100
+PS_ENDCAP_FLAT   = 0x00000200
+PS_ENDCAP_MASK   = 0x00000f00
+
+PS_JOIN_ROUND    = 0x00000000
+PS_JOIN_BEVEL    = 0x00001000
+PS_JOIN_MITER    = 0x00002000
+PS_JOIN_MASK     = 0x0000f000
+
+PS_COSMETIC      = 0x00000000
+PS_GEOMETRIC     = 0x00010000
+PS_TYPE_MASK     = 0x000f0000
+ 
+# Stock GDI objects for GetStockObject()
+WHITE_BRUSH         = 0
+LTGRAY_BRUSH        = 1
+GRAY_BRUSH          = 2
+DKGRAY_BRUSH        = 3
+BLACK_BRUSH         = 4
+NULL_BRUSH          = 5
+HOLLOW_BRUSH        = 5
+WHITE_PEN           = 6
+BLACK_PEN           = 7
+NULL_PEN            = 8
+OEM_FIXED_FONT      = 10
+ANSI_FIXED_FONT     = 11
+ANSI_VAR_FONT       = 12
+SYSTEM_FONT         = 13
+DEVICE_DEFAULT_FONT = 14
+DEFAULT_PALETTE     = 15
+SYSTEM_FIXED_FONT   = 16
+DEFAULT_GUI_FONT    = 17
+
+STOCK_LAST          = 17
+
+
 def round4(num):
     """Round to the nearest multiple of 4 greater than or equal to the
     given number.  EMF records are required to be aligned to 4 byte
     boundaries."""
     return ((num+3)/4)*4
 
+def RGB(r,g,b):
+    """
+Pack integer color values into an integer format as required by libEMF
+
+@param r: 0 - 255 or 0.0 - 1.0 specifying red
+@param g: 0 - 255 or 0.0 - 1.0 specifying green
+@param b: 0 - 255 or 0.0 - 1.0 specifying blue
+@return: single integer that should be used when any function needs a color value
+@rtype: int
+@type r: int or float
+@type g: int or float
+@type b: int or float
+
+"""
+    if isinstance(r,float):
+        r=int(255*r)
+    if r>255: r=255
+    elif r<0: r=0
+
+    if isinstance(g,float):
+        g=int(255*g)
+    if g>255: g=255
+    elif g<0: g=0
+
+    if isinstance(b,float):
+        b=int(255*b)
+    if b>255: b=255
+    elif b<0: b=0
+
+    return ((b<<16)|(g<<8)|r)
+
+def normalizeColor(c):
+    if isinstance(c,int):
+        return c
+    if isinstance(c,tuple) or isinstance(c,list):
+        return RGB(*c)
+    raise TypeError("Color must be specified as packed integer or 3-tuple (r,g,b)")
+
+
 
 class DC:
-    def __init__(self):
+    def __init__(self,width='6.0',height='4.0',density='72',units='in'):
         self.x=0
         self.y=0
+
+        # list of objects that can be referenced by their index
+        # number, called "handle"
         self.objects=[]
+        self.objects.append(None) # handle 0 is reserved
+
+        # Reference sizes
+        self.ref_dev_width=1024
+        self.ref_dev_height=768
+        self.ref_mm_width=320
+        self.ref_mm_height=240
+
+        # physical dimensions are in .01 mm units
+        if units=='mm':
+            self.width=int(width*100)
+            self.height=int(height*100)
+        else:
+            self.width=int(width*2540)
+            self.height=int(height*2540)
+
+        self.devwidth=int(width*density)
+        self.devheight=int(height*density)
+            
+        #self.text_alignment = TA_BASELINE;
+        self.text_color = RGB(0,0,0);
+        self.bk_color = RGB(0xff,0xff,0xff);
+        #self.bk_mode = OPAQUE;
+        #self.polyfill_mode = ALTERNATE;
+        #self.map_mode = MM_TEXT;
+
+    def addObject(self,emr):
+        i=len(self.objects)
+        self.objects.append(emr)
+        return i
 
 
 format_cache={} # dict mapping emr_id to class
@@ -75,6 +234,7 @@ class EMR_FORMAT:
         self.typedef=typedef
         self.id=emr_id
         self.fmtlist=[] # list of typecodes
+        self.defaults=[] # list of default values
         self.fmt="<" # string for pack/unpack.  little endian
         self.structsize=0
 
@@ -103,23 +263,32 @@ class EMR_FORMAT:
         return mangled
         
 
-    def setFormat(self,typedef,prefix=""):
+    def setFormat(self,typedef,prefix="",default=None):
         if self.debug: print "typedef=%s" % str(typedef)
         if isinstance(typedef,list) or isinstance(typedef,tuple):
-            for typecode,name in typedef:
-                self.setFormatItem(typecode,prefix+name)
+            for item in typedef:
+                if len(item)==3:
+                    typecode,name,default=item
+                else:
+                    typecode,name=item
+                self.setFormatItem(typecode,prefix+name,default)
         elif typedef:
             raise AttributeError("format must be a list")
 
-    def setFormatItem(self,typecode,name):
+    def setFormatItem(self,typecode,name,default):
         if typecode in GDI_typedefs:
-            self.setFormat(GDI_typedefs[typecode],name+"_")
+            typedef=GDI_typedefs[typecode]
+            if default and (isinstance(default,tuple) or isinstance(default,list)):
+                typedef=[(item[0],item[1],val) for item,val in zip(typedef,default)] # operate on copy, not original
+                
+            self.setFormat(typedef,name+"_")
         else:
-            self.appendFormat(typecode,name)
+            self.appendFormat(typecode,name,default)
 
-    def appendFormat(self,typecode,name):
+    def appendFormat(self,typecode,name,default):
         self.fmt+=typecode
         self.fmtlist.append(typecode)
+        self.defaults.append(default)
         self.namepos[name]=len(self.names)
         self.names.append(name)
         self.structsize=struct.calcsize(self.fmt)
@@ -143,13 +312,22 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
     def __init__(self,typeid=0,typedef=None):
         self.iType=typeid
         self.nSize=0
-        self.values=[] # list of values parsed from the input stream
         
         self.datasize=0
         self.data=None
         self.unhandleddata=None
 
+        # number of padding zeros we had to add because the format was
+        # expecting more data
+        self.zerofill=0
+        
         self.format=getFormat(typeid,typedef)
+
+        # list of values parsed from the input stream
+        self.values=copy.copy(self.format.defaults)
+
+        # error code.  Currently just used as a boolean
+        self.error=0
 
 
     def __getattr__(self,name):
@@ -205,33 +383,18 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
                     # we have a problem.  More stuff to unparse than
                     # we have data.  Hmmm.  Fill with binary zeros
                     # till I think of a better idea.
-                    self.data+="\0"*(self.format.structsize-len(self.data))
+                    self.zerofill=self.format.structsize-len(self.data)
+                    self.data+="\0"*self.zerofill
                 self.values=list(struct.unpack(self.format.fmt,self.data[0:self.format.structsize]))
             if self.datasize>self.format.structsize:
                 self.unserializeExtra(self.data[self.format.structsize:])
-
-    def unserializeExtend(self,format,data):
-        """Extend the format structure with the specified format
-        string and add the new data to self.values[].  The new format
-        structure is appended to the existing format structure so that
-        serialization of this new data will happen automatically."""
-        if format.structsize<=len(data):
-            vals=struct.unpack(format.fmt,data[0:format.structsize])
-            print "new vals=%s" % str(vals)
-            self.values.extend(vals)
-
-            # Don't just append to the existing format, because this
-            # would mess up the caching of the format.  Copy it.
-            newformat=copy.deepcopy(self.format)
-            newformat.extend(format)
-            self.format=newformat
 
     def unserializeOffset(self,offset):
         """Adjust offset to point to correct location in extra data.
         Offsets in the EMR record are from the start of the record, so
         we must subtract 8 bytes for iType and nSize, and also
         subtract the size of the format structure."""
-        return offset-8-self.format.structsize
+        return offset-8-self.format.structsize-self.zerofill
 
     def unserializeExtra(self,data):
         """Hook for subclasses to handle extra data in the record that
@@ -257,7 +420,6 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
         return (start,pairs)
             
     def serialize(self,fh):
-        self.resize()
         fh.write(struct.pack("<ii",self.iType,self.nSize))
         fh.write(struct.pack(self.format.fmt,*self.values))
         self.serializeExtra(fh)
@@ -286,6 +448,11 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
             fh.write(struct.pack(fmt,pair[0],pair[1]))
 
     def serializeString(self,fh,txt):
+        if isinstance(txt,unicode):
+            # convert to unicode and throw away first two byte
+            # signature.  FIXME: need to check if we're on a
+            # big-endian machine.
+            txt=txt.encode('utf-16')[2:]
         fh.write(txt)
         extra=round4(len(txt))-len(txt)
         if extra>0:
@@ -317,7 +484,7 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
 
     def str_decode(self,typecode,name):
         val=EMR_UNKNOWN.__getattr__(self,name)
-        if name.endswith("Color"):
+        if name.endswith("olor"):
             val=self.str_color(val)
         elif typecode.endswith("s"):
             val=val.decode('utf-16')
@@ -330,7 +497,9 @@ class EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't
         # those that do
         if self.format.typedef:
             #print "typedef=%s" % str(self.format.typedef)
-            for typecode,name in self.format.typedef:
+            for item in self.format.typedef:
+                typecode=item[0]
+                name=item[1]
                 names=self.format.mangle(typecode,name)
                 if len(names)>1:
                     txt.write("\t%-20s: %s\n" % (name," ".join(["%s=%s" % (subname.replace(name+"_",''),EMR_UNKNOWN.__getattr__(self,subname)) for subname in names])))
@@ -360,47 +529,79 @@ class EMR:
 
         emr_id=1
         
-        def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('RECTL','rclFrame'),('i','dSignature'),('i','nVersion'),('i','nBytes'),('i','nRecords'),('h','nHandles'),('h','sReserved'),('i','nDescription'),('i','offDescription'),('i','nPalEntries'),('SIZEL','szlDevice'),('SIZEL','szlMillimeters')])
-            self.description=''
+        def __init__(self,description=''):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('RECTL','rclBounds'),
+                ('RECTL','rclFrame'),
+                ('i','dSignature',1179469088),
+                ('i','nVersion',0x10000),
+                ('i','nBytes',0),
+                ('i','nRecords',0),
+                ('h','nHandles',0),
+                ('h','sReserved',0),
+                ('i','nDescription',0),
+                ('i','offDescription',0),
+                ('i','nPalEntries',0),
+                ('SIZEL','szlDevice',(1024,768)),
+                ('SIZEL','szlMillimeters',(320,240)),
+                ('i','cbPixelFormat',0),
+                ('i','offPixelFormat',0),
+                ('i','bOpenGL',0),
+                ('SIZEL','szlMicrometers')])
+
+            # NOTE: rclBounds and rclFrame will be determined at
+            # serialize time
+
+            if isinstance(description,str):
+                # turn it into a unicode string
+                # print "description=%s" % description
+                self.description=description.decode('utf-8')
+                # print "self.description=%s" % self.description
+                # print isinstance(self.description,unicode)
+            if len(description)>0:
+                self.description=u'pyemf '+__version__.decode('utf-8')+u'\0'+description+u'\0\0'
+            self.nDescription=len(self.description)
 
         def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
 
-            # subtract 8 because iType and nSize are always read
-            # separately
-            descriptionStart=self.unserializeOffset(self.offDescription)
+            # FIXME: descriptionStart could potentially be negative if
+            # we have an old format metafile without stuff after
+            # szlMillimeters AND we have a description.
+            if self.offDescription>0:
+                start=self.unserializeOffset(self.offDescription)
+                txt=data[start:start+(2*self.nDescription)]
+                self.description=txt.decode('utf-16')
+                print "str: %s" % self.description
 
-            dataend=descriptionStart
-            if dataend<=0:
-                dataend=len(data)
-            count=dataend
-            print "dataend=%d count=%d len=%d" % (dataend,count,len(data))
+        def str_extra(self):
+            txt=StringIO()
+            txt.write("\tunicode string: %s\n" % str(self.description))
+            txt.write("%s\n" % (struct.pack('16s',self.description.encode('utf-16'))))
+            return txt.getvalue()
 
-            start=0
-            new_typedefs=[
-                [('i','cbPixelFormat'),('i','offPixelFormat'),('i','bOpenGL')],
-                [('SIZEL','szlMicrometers')]
-                ]
-            for typedef in new_typedefs:
-                format=EMR_FORMAT(-1,typedef)
-                print "start=%d dataend=%d count=%d" % (start,dataend,count)
-                if start+format.structsize<=count:
-                    self.unserializeExtend(format,data[start:start+format.structsize])
-                    start+=format.structsize
-            
-            print "bOpenGL=%d" % self.bOpenGL
-            print "szlMicrometers_cx=%d" % self.szlMicrometers_cx
-
-            if descriptionStart>0:
-                count=len(data)-descriptionStart
-                print "remaining: start=%d count=%d" % (descriptionStart,count)
-                txt=data[descriptionStart:descriptionStart+count]
-                print "str: %s" % (txt.decode('utf-16'))
-                self.description=txt
+        def setBounds(self,dc):
+            self.rclBounds_left=0
+            self.rclBounds_top=0
+            self.rclBounds_right=dc.devwidth
+            self.rclBounds_bottom=dc.devheight
+            self.rclFrame_left=0
+            self.rclFrame_top=0
+            self.rclFrame_right=dc.width
+            self.rclFrame_bottom=dc.height
 
         def sizeExtra(self):
-            return round4(len(self.description))
+            self.szlMicrometers_cx=self.szlMillimeters_cx*1000
+            self.szlMicrometers_cy=self.szlMillimeters_cy*1000
+
+            self.nChars=len(self.description)
+            if self.nChars>0:
+                self.offDescription=self.serializeOffset()
+            else:
+                self.offDescription=0
+            sizestring=round4(self.nChars*2) # always unicode
+            
+            return sizestring
 
         def serializeExtra(self,fh):
             self.serializeString(fh,self.description)
@@ -409,8 +610,9 @@ class EMR:
 
     class POLYBEZIER(EMR_UNKNOWN):
         emr_id=2
-        def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','cptl')])
+        def __init__(self,points=[],bounds=(0,0,0,0)):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds',bounds),('i','cptl',len(points))])
+            self.aptl=points
 
         def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
@@ -492,8 +694,8 @@ class EMR:
 
     class SETWINDOWEXTEX(EMR_UNKNOWN):
         emr_id=9
-        def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('SIZEL','szlExtent')])
+        def __init__(self,cx=0,cy=0):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('SIZEL','szlExtent',(cx,cy))])
 
 
     class SETWINDOWORGEX(EMR_UNKNOWN):
@@ -520,7 +722,10 @@ class EMR:
     class EOF(EMR_UNKNOWN):
         emr_id=14
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','nPalEntries'),('i','offPalEntries'),('i','nSizeLast')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','nPalEntries',0),
+                ('i','offPalEntries',0),
+                ('i','nSizeLast',0)])
             # I don't know if I have a broken example or what, but
             # features.emf file only has a 12 byte long EOF record.
             # OpenOffice seems to handle it, though.
@@ -535,23 +740,27 @@ class EMR:
     class SETMAPPERFLAGS(EMR_UNKNOWN):
         emr_id=16
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','dwFlags')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','dwFlags',0)])
 
 
     class SETMAPMODE(EMR_UNKNOWN):
         emr_id=17
-        def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','iMode')])
+        def __init__(self,mode=MM_ANISOTROPIC,last=MM_MAX):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','iMode',mode)])
+            if mode<0 or mode>last:
+                self.error=1
 
             
     class SETBKMODE(SETMAPMODE):
         emr_id=18
-        pass
+        def __init__(self,mode=OPAQUE):
+            EMR.SETMAPMODE.__init__(self,mode,last=BKMODE_LAST)
 
-            
+
     class SETPOLYFILLMODE(SETMAPMODE):
         emr_id=19
-        pass
+        def __init__(self,mode=ALTERNATE):
+            EMR.SETMAPMODE.__init__(self,mode,last=POLYFILL_LAST)
 
             
     class SETROP2(SETMAPMODE):
@@ -574,7 +783,7 @@ class EMR:
     class SETTEXTCOLOR(EMR_UNKNOWN):
         emr_id=24
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','crColor')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','crColor',RGB(0,0,0))])
 
 
     class SETBKCOLOR(SETTEXTCOLOR):
@@ -598,7 +807,11 @@ class EMR:
     class SCALEVIEWPORTEXTEX(EMR_UNKNOWN):
         emr_id=31
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','xNum'),('i','xDenom'),('i','yNum'),('i','yDenom')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','xNum',1),
+                ('i','xDenom',1),
+                ('i','yNum',1),
+                ('i','yDenom',1)])
 
     class SCALEWINDOWEXTEX(SCALEVIEWPORTEXTEX):
         emr_id=32
@@ -628,17 +841,19 @@ class EMR:
 
     class SELECTOBJECT(EMR_UNKNOWN):
         emr_id=37
-        def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihObject')])
+        def __init__(self,dc=None,handle=0):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihObject',handle)])
 
 
     # Note: a line will still be drawn when the linewidth==0.  To force an
     # invisible line, use style=PS_NULL
     class CREATEPEN(EMR_UNKNOWN):
         emr_id=38
-        def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihPen'),('LOGPEN','lopn')])
-
+        def __init__(self,dc=None,style=PS_SOLID,width=1,color=0):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihPen',0),('LOGPEN','lopn',(style,width,0,color))])
+            if dc:
+                handle=dc.addObject(self)
+                self.ihPen=handle
 
     class CREATEBRUSHINDIRECT(EMR_UNKNOWN):
         emr_id=39
@@ -872,8 +1087,9 @@ class EMR:
 
     class POLYBEZIER16(EMR_UNKNOWN):
         emr_id=85
-        def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','cpts')])
+        def __init__(self,points=[],bounds=(0,0,0,0)):
+            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds',bounds),('i','cpts',len(points))])
+            self.apts=points
 
         def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
@@ -974,21 +1190,87 @@ for name in dir(EMR):
         #print "subclass! id=%d %s" % (cls.emr_id,str(cls))
         emrmap[cls.emr_id]=cls
 
+
+
 class EMF:
-    def __init__(self):
+    """
+
+User interface to EMF creation.
+
+@group Creating Metafiles: Create, Save
+@group Drawing Parameters: RGB, GetStockObject, SelectObject, DeleteObject, Crea
+tePen, CreateSolidBrush, SetBkColor, SetBkMode, SetPolyFillMode
+@group Drawing Primitives: SetPixel, Polyline, Polygon, Rectangle, RoundRect, Ellipse, Arc, Chord, Pie, PolyBezier
+@group Path Primatives: BeginPath, EndPath, MoveToEx, LineTo, PolylineTo, ArcTo,
+ PolyBezierTo, CloseFigure, FillPath, StrokePath
+@group Text: CreateFont, SetTextAlign, SetTextColor, TextOut
+@group Viewport Manipulation: SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx
+, GetWindowOrgEx, SetViewportExtEx, ScaleViewportExtEx, GetViewportExtEx, SetWin
+dowExtEx, ScaleWindowExtEx, GetWindowExtEx 
+@group Misc: GetLastError, GetDeviceCaps, SetMapMode
+
+"""
+
+    def __init__(self,width=6.0,height=4.0,density=300,units="in",
+                 description="pyemf.sf.net"):
+        """
+Create an EMF structure in memory.  The size of the resulting image is
+specified in either inches or millimeters depending on the value of
+L{units}.  Width and height are floating point values, but density
+must be an integer because this becomes the basis for the coordinate
+system in the image.  Density is the number of individually
+addressible pixels per unit measurement (dots per inch or dots per
+millimeter, depending on the units system) in the image.  A
+consequence of this is that each pixel is specified by a pair of
+integer coordinates.
+
+@param width: width of EMF image in inches or millimeters
+@param height: height of EMF image in inches or millimeters
+@param density: dots (pixels) per unit measurement
+@param units: string indicating the unit measurement, one of:
+ - 'in'
+ - 'mm'
+@type width: float
+@type height: float
+@type density: int
+@type units: string
+@param description: optional string to specify a description of the image
+@type description: string
+
+"""
         self.filename=None
-        self.dc=DC()
-        self.record=[]
+        self.dc=DC(width,height,density,units)
+        self.records=[]
+
+        emr=EMR.HEADER(description)
+        self._append(emr)
+        self.SetMapMode(MM_ANISOTROPIC)
+        self.SetWindowExtEx(self.dc.devwidth,self.dc.devheight)
+        self.SetViewportExtEx(
+            int(self.dc.width/100.0*self.dc.ref_dev_width/self.dc.ref_mm_width),
+            int(self.dc.height/100.0*self.dc.ref_dev_height/self.dc.ref_mm_height))
+
 
     def load(self,filename=None):
+        """Read an existing EMF file.  If any records exist in the
+        current object, they will be overwritten by the records from
+        this file.
+
+@param filename: filename to load
+@type filename: string
+@returns: True for success, False for failure.
+@rtype: Boolean
+        """
         if filename:
             self.filename=filename
 
         if self.filename:
             fh=open(self.filename)
-            self.unserialize(fh)
+            self.records=[]
+            self._unserialize(fh)
 
-    def unserialize(self,fh):
+
+    def _unserialize(self,fh):
         try:
             count=1
             while count>0:
@@ -1004,26 +1286,835 @@ class EMF:
                         e=EMR_UNKNOWN()
 
                     e.unserialize(fh,iType,nSize)
-                    self.record.append(e)
+                    self.records.append(e)
                     print e
                 
         except EOFError:
             pass
 
+    def _append(self,e):
+        """Append an EMR to the record list, unless the record has
+        been flagged as having an error."""
+        if not e.error:
+            self.records.append(e)
+            return 1
+        return 0
+
+    def _end(self):
+        end=self.records[-1]
+        if not isinstance(end,EMR.EOF):
+            print "adding EOF record"
+            e=EMR.EOF()
+            self._append(e)
+        header=self.records[0]
+        header.setBounds(self.dc)
+        header.nRecords=len(self.records)
+        header.nHandles=len(self.dc.objects)
+        size=0
+        for e in self.records:
+            e.resize()
+            size+=e.nSize
+            header.nBytes=size
+        
     def save(self,filename=None):
+        """Write the EMF to disk.
+
+@param filename: filename to write
+@type filename: string
+@returns: True for success, False for failure.
+@rtype: Boolean
+        """
+
+        self._end()
+    
         if filename:
             self.filename=filename
-
-        if self.filename:
-            fh=open(self.filename,"wb")
-            self.serialize(fh)
-            fh.close()
-                
-
-    def serialize(self,fh):
-        for e in self.record:
-            #print e
+            
+            if self.filename:
+                fh=open(self.filename,"wb")
+                self._serialize(fh)
+                fh.close()
+        
+    def _serialize(self,fh):
+        for e in self.records:
+            print e
             e.serialize(fh)
+
+    def _create(self,width,height,dots_per_unit,units):
+        pass
+
+    def _getBounds(self,points):
+        """Get the bounding rectangle for this list of 2-tuples."""
+        left=points[0][0]
+        right=left
+        top=points[0][1]
+        bottom=top
+        for x,y in points[1:]:
+            if x<left:
+                left=x
+            elif x>right:
+                right=x
+            if y<top:
+                top=y
+            elif y>bottom:
+                bottom=y
+        return (left,top,right,bottom)
+
+    def _useShort(self,bounds):
+        """Determine if we can use the shorter 16-bit EMR structures.
+        If all the numbers can fit within 16 bit integers, return
+        true."""
+
+        SHRT_MIN=-32768
+        SHRT_MAX=32767
+        if bounds[0]>=SHRT_MIN and bounds[1]>=SHRT_MIN and bounds[2]<=SHRT_MAX and bounds[3]<=SHRT_MAX:
+            return True
+        return False
+
+
+
+    def GetStockObject(self,obj):
+        """
+
+Retrieve the handle for a predefined graphics object. Stock objects
+include (at least) the following:
+
+ - WHITE_BRUSH
+ - LTGRAY_BRUSH
+ - GRAY_BRUSH
+ - DKGRAY_BRUSH
+ - BLACK_BRUSH
+ - NULL_BRUSH
+ - HOLLOW_BRUSH
+ - WHITE_PEN
+ - BLACK_PEN
+ - NULL_PEN
+ - OEM_FIXED_FONT
+ - ANSI_FIXED_FONT
+ - ANSI_VAR_FONT
+ - SYSTEM_FONT
+ - DEVICE_DEFAULT_FONT
+ - DEFAULT_PALETTE
+ - SYSTEM_FIXED_FONT
+ - DEFAULT_GUI_FONT
+
+@param    obj:  	number of stock object.
+
+@return:    handle of stock graphics object.
+@rtype: int
+@type obj: int
+
+        """
+        pass
+
+    def SelectObject(self,handle):
+        """
+
+Make the given graphics object current.
+
+@param handle: handle of graphics object to make current.
+
+@return:
+    the handle of the current graphics object which obj replaces.
+
+@rtype: int
+@type handle: int
+
+        """
+        e=EMR.SELECTOBJECT(self.dc,handle)
+        if not self._append(e):
+            return 0
+        return 1
+
+    def DeleteObject(self,obj):
+        """
+
+Delete the given graphics object. Note that, now, only those contexts
+into which the object has been selected get a delete object
+records.
+
+@param    obj:  	handle of graphics object to delete.
+
+@return:    true if the object was successfully deleted.
+@rtype: int
+@type obj: int
+
+        """
+        pass
+    def CreatePen(self,style,width,color):
+        """
+
+Create a pen, used to draw lines and path outlines.
+
+
+@param    style:  	the style of the new pen, one of:
+ - PS_SOLID
+ - PS_DASH
+ - PS_DOT
+ - PS_DASHDOT
+ - PS_DASHDOTDOT
+ - PS_NULL
+ - PS_INSIDEFRAME
+ - PS_USERSTYLE
+ - PS_ALTERNATE
+@param    width:  	the width of the new pen.
+@param    color:  	(r,g,b) tuple or the packed integer L{color<RGB>} of the new pen.
+
+@return:    handle to the new pen graphics object.
+@rtype: int
+@type style: int
+@type width: int
+@type color: int
+
+        """
+        e=EMR.CREATEPEN(self.dc,style,width,normalizeColor(color))
+        if not self._append(e):
+            return 0
+        return 1
+        
+    def CreateSolidBrush(self,color):
+        """
+
+Create a solid brush used to fill polygons.
+@param color: the L{color<RGB>} of the solid brush.
+@return: handle to brush graphics object.
+
+@rtype: int
+@type color: int
+
+        """
+        pass
+    def SetBkColor(self,color):
+        """
+
+Set the background color. (self,As near as I can tell, StarOffice only uses
+this for text background.)
+@param color: background L{color<RGB>}.
+@return: previous background L{color<RGB>}.
+@rtype: int
+@type color: int
+
+        """
+        pass
+    def SetBkMode(self,mode):
+        """
+
+Set the background mode. (StarOffice 1.1 seems to ignore this value, but Windows uses it.)
+The choices for mode are:
+ - TRANSPARENT
+ - OPAQUE
+@param mode: background mode.
+@return: previous background mode.
+@rtype: int
+@type mode: int
+
+        """
+        pass
+    def SetPolyFillMode(self,mode):
+        """
+
+Set the polygon fill mode.  Generally these modes produce
+different results only when the edges of the polygons overlap
+other edges.
+
+@param mode: fill mode with the following options:
+ - ALTERNATE - fills area between odd and even numbered sides
+ - WINDING - fills all area as long as a point is between any two sides
+@return: previous fill mode.
+@rtype: int
+@type mode: int
+
+        """
+        pass
+    def GetDeviceCaps(self,capability):
+        """
+
+Return various information about the "capabilities" of the device
+context. This is wholly fabricated for the metafile (i.e., there is
+no real device to which these attributes relate).
+@param capability: enumeration with the following options:
+ - DRIVERVERSION
+ - TECHNOLOGY
+ - HORZSIZE
+ - VERTSIZE
+ - HORZRES
+ - VERTRES
+ - LOGPIXELSX
+ - LOGPIXELSY
+@return: device capability
+@rtype: int
+@type capability: int
+
+        """
+        pass
+    def SetMapMode(self,mode):
+        """
+
+Set the window mapping mode. (OpenOffice supports at least MM_ANISOTROPIC.)
+ - MM_TEXT
+ - MM_LOMETRIC
+ - MM_HIMETRIC
+ - MM_LOENGLISH
+ - MM_HIENGLISH
+ - MM_TWIPS
+ - MM_ISOTROPIC
+ - MM_ANISOTROPIC
+@param mode: window mapping mode.
+@return: previous window mapping mode, or zero if error.
+@rtype: int
+@type mode: int
+        """
+
+        e=EMR.SETMAPMODE(mode)
+        if not self._append(e):
+            return 0
+        return 1
+        
+    def SetViewportOrgEx(self,x,y):
+        """
+
+Set the origin of the viewport. (Not entirely sure if this is honored
+by StarOffice.)
+@param x: new x position of the viewport origin.
+@param y: new y position of the viewport origin.
+@return: previous viewport origin
+@rtype: 2-tuple (x,y) if successful, or None if unsuccessful
+@type x: int
+@type y: int
+        """
+        pass
+    def GetViewportOrgEx(self):
+        """
+
+Get the origin of the viewport.
+@return: returns the current viewport origin.
+@rtype: 2-tuple (x,y)
+        """
+        pass
+    def SetWindowOrgEx(self,x,y):
+        """
+
+Set the origin of the window. Evidently, this means that a point drawn
+at the given coordinates will appear at the Viewport origin.
+@param x: new x position of the window origin.
+@param y: new y position of the window origin.
+@return: previous window origin
+@rtype: 2-tuple (x,y) if successful, or None if unsuccessful
+@type x: int
+@type y: int
+        """
+        pass
+    def GetWindowOrgEx(self):
+        """
+
+Get the origin of the window.
+@return: returns the current window  origin.
+@rtype: 2-tuple (x,y)
+
+        """
+        pass
+    def SetViewportExtEx(self,cx,cy):
+        """
+Set the dimensions of the viewport in device units.  Device units are
+based on the dimensions returned by the GetDeviceCaps calls.  So, each
+pixel of a device unit is sized xmm/xpixels by ymm/ypixels in
+millimeters.
+
+@param cx: new width of the viewport.
+@param cy: new height of the viewport.
+@return: returns the previous size of the viewport.
+@rtype: 2-tuple (width,height) if successful, or None if unsuccessful
+@type cx: int
+@type cy: int
+        """
+        e=EMR.SETVIEWPORTEXTEX(cx,cy)
+        if not self._append(e):
+            return 0
+        return 1
+
+    def ScaleViewportExtEx(self,x_num,x_den,y_num,y_den):
+        """
+
+Scale the dimensions of the viewport.
+@param x_num: numerator of x scale
+@param x_den: denominator of x scale
+@param y_num: numerator of y scale
+@param y_den: denominator of y scale
+@return: returns the previous size of the viewport.
+@rtype: 2-tuple (width,height) if successful, or None if unsuccessful
+@type x_num: int
+@type x_den: int
+@type y_num: int
+@type y_den: int
+        """
+        pass
+    def GetViewportExtEx(self):
+        """
+
+Get the dimensions of the viewport.
+@return: returns the size of the viewport.
+@rtype: 2-tuple (width,height)
+
+        """
+        pass
+    def SetWindowExtEx(self,cx,cy):
+        """
+
+Set the dimensions of the window. (OpenOffice honors this at least when map mode is MM_ANISOTROPIC.)
+@param cx: new width of the window.
+@param cy: new height of the window.
+@return: returns the previous size of the window.
+@rtype: 2-tuple (width,height) if successful, or None if unsuccessful
+@type cx: int
+@type cy: int
+        """
+        e=EMR.SETWINDOWEXTEX(cx,cy)
+        if not self._append(e):
+            return 0
+        return 1
+
+    def ScaleWindowExtEx(self,x_num,x_den,y_num,y_den):
+        """
+
+Scale the dimensions of the window.
+@param x_num: numerator of x scale
+@param x_den: denominator of x scale
+@param y_num: numerator of y scale
+@param y_den: denominator of y scale
+@return: returns the previous size of the window.
+@rtype: 2-tuple (width,height) if successful, or None if unsuccessful
+@type x_num: int
+@type x_den: int
+@type y_num: int
+@type y_den: int
+        """
+        pass
+    def GetWindowExtEx(self):
+        """
+
+Get the dimensions of the window.
+@return: returns the size of the window.
+@rtype: 2-tuple (width,height)
+        """
+        pass
+    def SetPixel(self,x,y,color):
+        """
+
+Set the pixel to the given color.
+@param x: the horizontal position.
+@param y: the vertical position.
+@param color: the L{color<RGB>} to set the pixel.
+@type x: int
+@type y: int
+@type color: int
+
+        """
+        pass
+    def Polyline(self,points):
+        """
+
+Draw a sequence of connected lines.
+@param points: list of x,y tuples
+@return: true if polyline is successfully rendered.
+@rtype: int
+@type points: tuple
+
+        """
+        bounds=self._getBounds(points)
+        if self._useShort(bounds):
+            e=EMR.POLYLINE16(points,bounds)
+        else:
+            e=EMR.POLYLINE(points,bounds)
+        if not self._append(e):
+            return 0
+        return 1
+
+    def Polygon(self,points):
+        """
+
+Draw a sequence of connected straight line segments where the end
+of the last line segment is connected to the beginning of the first
+line segment.
+@param points: list of x,y tuples
+@return: true if polygon is successfully rendered.
+@rtype: int
+@type points: tuple
+
+        """
+        pass
+    def Ellipse(self,left,top,right,bottom):
+        """
+
+Draw an ellipse using the current pen.
+@param left: x position of left side of ellipse bounding box.
+@param top: y position of top side of ellipse bounding box.
+@param right: x position of right edge of ellipse bounding box.
+@param bottom: y position of bottom edge of ellipse bounding box.
+@return: true if rectangle was successfully rendered.
+@rtype: int
+@type left: int
+@type top: int
+@type right: int
+@type bottom: int
+
+        """
+        pass
+    def Arc(self,left,top,right,bottom,xstart,ystart,xend,yend):
+        """
+
+Draw an arc of an ellipse.  The ellipse is specified by its bounding
+rectange and two lines from its center to indicate the start and end
+angles.  left, top, right, bottom describe the bounding rectangle of
+the ellipse.  The start point given by xstart,ystert defines a ray
+from the center of the ellipse through the point and out to infinity.
+The point at which this ray intersects the ellipse is the starting
+point of the arc.  Similarly, the infinite radial ray from the center
+through the end point defines the end point of the ellipse.  The arc
+is drawn in a counterclockwise direction, and if the start and end
+rays are coincident, a complete ellipse is drawn.
+
+@param left: x position of left edge of arc box.
+@param top: y position of top edge of arc box.
+@param right: x position of right edge of arc box.
+@param bottom: y position bottom edge of arc box.
+@param xstart: x position of arc start.
+@param ystart: y position of arc start.
+@param xend: x position of arc end.
+@param yend: y position of arc end.
+@return: true if arc was successfully rendered.
+@rtype: int
+@type left: int
+@type top: int
+@type right: int
+@type bottom: int
+@type xstart: int
+@type ystart: int
+@type xend: int
+@type yend: int
+
+        """
+        pass
+    def PolyBezier(self,points):
+        """
+
+Draw cubic Bezier curves using the list of points as both endpoints
+and control points.  The first point is used as the starting point,
+the second and thrird points are control points, and the fourth point
+is the end point of the first curve.  Subsequent curves need three
+points each: two control points and an end point, as the ending point
+of the previous curve is used as the starting point for the next
+curve.
+
+@param points: list of x,y tuples that are either end points or control points
+@return: true if bezier curve was successfully rendered.
+@rtype: int
+@type points: tuple
+
+        """
+        pass
+    def BeginPath(self):
+        """
+
+Begin defining a path.  Any previous unclosed paths are discarded.
+@return: true if successful.
+@rtype: int
+
+        """
+        pass
+    def EndPath(self):
+        """
+
+End the path definition.
+@return: true if successful.
+@rtype: int
+
+        """
+        pass
+    def MoveToEx(self,x,y):
+        """
+
+Move the current point to the given position and implicitly begin a
+new figure or path.
+
+@param x: new x position.
+@param y: new y position.
+@return: true if position successfully changed (can this fail?)
+@rtype: int
+@type x: int
+@type y: int
+        """
+        pass
+    def LineTo(self,x,y):
+        """
+
+Draw a straight line using the current pen from the current point to
+the given position.
+
+@param x: x position of line end.
+@param y: y position of line end.
+@return: true if line is drawn (can this fail?)
+@rtype: int
+@type x: int
+@type y: int
+
+        """
+        pass
+    def PolylineTo(self,points):
+        """
+
+Draw a sequence of connected lines starting from the current
+position and update the position to the final point in the list.
+
+@param points: list of x,y tuples
+@return: true if polyline is successfully rendered.
+@rtype: int
+@type points: tuple
+
+        """
+        pass
+    def ArcTo(self,left,top,right,bottom,xstart,ystart,xend,yend):
+        """
+
+Draw an arc and update the current position.  The arc is drawn as
+described in L{Arc}, but in addition the start of the arc will be
+connected to the previous position and the current position is updated
+to the end of the arc so subsequent path operations such as L{LineTo},
+L{PolylineTo}, etc. will connect to the end.
+
+@param left: x position of left edge of arc box.
+@param top: y position of top edge of arc box.
+@param right: x position of right edge of arc box.
+@param bottom: y position bottom edge of arc box.
+@param xstart: x position of arc start.
+@param ystart: y position of arc start.
+@param xend: x position of arc end.
+@param yend: y position of arc end.
+@return: true if arc was successfully rendered.
+@rtype: int
+@type left: int
+@type top: int
+@type right: int
+@type bottom: int
+@type xstart: int
+@type ystart: int
+@type xend: int
+@type yend: int
+
+        """
+        pass
+    def PolyBezierTo(self,points):
+        """
+
+Draw cubic Bezier curves, as described in L{PolyBezier}, but in
+addition draw a line from the previous position to the start of the
+curve.  If the arc is successfully rendered, the current position is
+updated so that subsequent path operations such as L{LineTo},
+L{PolylineTo}, etc. will follow from the end of the curve.
+
+@param points: list of x,y tuples that are either end points or control points
+@return: true if bezier curve was successfully rendered.
+@rtype: int
+@type points: tuple
+
+        """
+        pass
+    def CloseFigure(self):
+        """
+
+Close a currently open path, which connects the current position to the starting position of a figure.  Usually the starting position is the most recent call to L{MoveToEx}.
+
+@return: true if successful
+
+@rtype: int
+
+        """
+        pass
+    def FillPath(self):
+        """
+
+Close any currently open path and fills it using the currently
+selected brush and polygon fill mode.
+
+@return: true if successful.
+@rtype: int
+
+        """
+        pass
+    def StrokePath(self):
+        """
+
+Close any currently open path and outlines it using the currently
+selected pen.
+
+@return: true if successful.
+@rtype: int
+
+        """
+        pass
+    def SetTextAlign(self,alignment):
+        """
+
+Set the subsequent alignment of drawn text. You can also pass a flag
+indicating whether or not to update the current point to the end of the
+text. Alignment may have the (sum of) values:
+ - TA_NOUPDATECP
+ - TA_UPDATECP
+ - TA_LEFT
+ - TA_RIGHT
+ - TA_CENTER
+ - TA_TOP
+ - TA_BOTTOM
+ - TA_BASELINE
+ - TA_RTLREADING
+@param alignment: new text alignment.
+@return: previous text alignment value.
+@rtype: int
+@type alignment: int
+
+        """
+        pass
+    def SetTextColor(self,color):
+        """
+
+Set the text foreground color.
+@param color: text foreground L{color<RGB>}.
+@return: previous text foreground L{color<RGB>}.
+@rtype: int
+@type color: int
+
+        """
+        pass
+    def CreateFont(self,height,width,escapement,orientation,weight,italic,underline,strike_out,charset,out_precision,clip_precision,quality,pitch_family,name):
+        """
+
+Create a new font object. Presumably, when rendering the EMF the
+system tries to find a reasonable approximation to all the requested
+attributes.
+
+@param height:
+ - if height>0: locate the font using the specified height as the typical cell height
+ - if height<0: use the absolute value of the height as the typical glyph height.
+@param width: typical glyph width.  If zero, the typical aspect ratio of the font is used.
+@param escapement: angle, in degrees*10, of rendered string rotation.  Note that escapement and orientation must be the same.
+@param orientation: angle, in degrees*10, of rendered string rotation.  Note that escapement and orientation must be the same.
+@param weight: weight has (at least) the following values:
+ - FW_DONTCARE
+ - FW_THIN
+ - FW_EXTRALIGHT
+ - FW_ULTRALIGHT
+ - FW_LIGHT
+ - FW_NORMAL
+ - FW_REGULAR
+ - FW_MEDIUM
+ - FW_SEMIBOLD
+ - FW_DEMIBOLD
+ - FW_BOLD
+ - FW_EXTRABOLD
+ - FW_ULTRABOLD
+ - FW_HEAVY
+ - FW_BLACK
+@param italic: non-zero means try to find an italic version of the face.
+@param underline: non-zero means to underline the glyphs.
+@param strike_out: non-zero means to strike-out the glyphs.
+@param charset: select the character set from the following list:
+ - ANSI_CHARSET
+ - DEFAULT_CHARSET
+ - SYMBOL_CHARSET
+ - SHIFTJIS_CHARSET
+ - HANGEUL_CHARSET
+ - HANGUL_CHARSET
+ - GB2312_CHARSET
+ - CHINESEBIG5_CHARSET
+ - GREEK_CHARSET
+ - TURKISH_CHARSET
+ - HEBREW_CHARSET
+ - ARABIC_CHARSET
+ - BALTIC_CHARSET
+ - RUSSIAN_CHARSET
+ - EE_CHARSET
+ - EASTEUROPE_CHARSET
+ - THAI_CHARSET
+ - JOHAB_CHARSET
+ - MAC_CHARSET
+ - OEM_CHARSET
+@param out_precision: the precision of the face may have on of the
+following values:
+ - OUT_DEFAULT_PRECIS
+ - OUT_STRING_PRECIS
+ - OUT_CHARACTER_PRECIS
+ - OUT_STROKE_PRECIS
+ - OUT_TT_PRECIS
+ - OUT_DEVICE_PRECIS
+ - OUT_RASTER_PRECIS
+ - OUT_TT_ONLY_PRECIS
+ - OUT_OUTLINE_PRECIS
+@param clip_precision: the precision of glyph clipping may have one of the
+following values:
+ - CLIP_DEFAULT_PRECIS
+ - CLIP_CHARACTER_PRECIS
+ - CLIP_STROKE_PRECIS
+ - CLIP_MASK
+ - CLIP_LH_ANGLES
+ - CLIP_TT_ALWAYS
+ - CLIP_EMBEDDED
+@param quality: (subjective) quality of the font. Choose from the following
+values:
+ - DEFAULT_QUALITY
+ - DRAFT_QUALITY
+ - PROOF_QUALITY
+ - NONANTIALIASED_QUALITY
+ - ANTIALIASED_QUALITY
+@param pitch_family: the pitch and family of the FONT face. Add up the
+desired values from this list:
+ - DEFAULT_PITCH
+ - FIXED_PITCH
+ - VARIABLE_PITCH
+ - MONO_FONT
+ - FF_DONTCARE
+ - FF_ROMAN
+ - FF_SWISS
+ - FF_MODERN
+ - FF_SCRIPT
+ - FF_DECORATIVE
+@param name: ASCII string containing the name of the FONT face.
+@return: handle of font.
+@rtype: int
+@type height: int
+@type width: int
+@type escapement: int
+@type orientation: int
+@type weight: int
+@type italic: int
+@type underline: int
+@type strike_out: int
+@type charset: int
+@type out_precision: int
+@type clip_precision: int
+@type quality: int
+@type pitch_family: int
+@type name: string
+
+        """
+        pass
+    def TextOut(self,x,y,text):
+        """
+
+Draw a string of text at the given position using the current FONT and
+other text attributes.
+@param x: x position of text.
+@param y: y position of text.
+@param text: ASCII text string to render.
+@return: true of string successfully drawn.
+
+@rtype: int
+@type x: int
+@type y: int
+@type text: string
+
+        """
+        pass
+
+
 
 
 
@@ -1048,7 +2139,13 @@ if __name__ == "__main__":
     parser=OptionParser(usage="usage: %prog [options] emf-files...")
     (options, args) = parser.parse_args()
 
-    for filename in args:
+    if len(args)>0:
+        for filename in args:
+            e=EMF()
+            e.load(filename)
+            print "Saving %s..." % (filename+".out")
+            e.save(filename+".out")
+            print "%s saved successfully." % (filename+".out")
+    else:
         e=EMF()
-        e.load(filename)
-        e.save(filename+".out")
+        e.save("new.emf")
