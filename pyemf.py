@@ -531,8 +531,14 @@ class EMR:
         
         def __init__(self,description=''):
             EMR_UNKNOWN.__init__(self,self.emr_id,[
-                ('RECTL','rclBounds'),
-                ('RECTL','rclFrame'),
+                ('i','rclBounds_left'),
+                ('i','rclBounds_top'),
+                ('i','rclBounds_right'),
+                ('i','rclBounds_bottom'),
+                ('i','rclFrame_left'),
+                ('i','rclFrame_top'),
+                ('i','rclFrame_right'),
+                ('i','rclFrame_bottom'),
                 ('i','dSignature',1179469088),
                 ('i','nVersion',0x10000),
                 ('i','nBytes',0),
@@ -542,12 +548,15 @@ class EMR:
                 ('i','nDescription',0),
                 ('i','offDescription',0),
                 ('i','nPalEntries',0),
-                ('SIZEL','szlDevice',(1024,768)),
-                ('SIZEL','szlMillimeters',(320,240)),
+                ('i','szlDevice_cx',1024),
+                ('i','szlDevice_cy',768),
+                ('i','szlMillimeters_cx',320),
+                ('i','szlMillimeters_cy',240),
                 ('i','cbPixelFormat',0),
                 ('i','offPixelFormat',0),
                 ('i','bOpenGL',0),
-                ('SIZEL','szlMicrometers')])
+                ('i','szlMicrometers_cx'),
+                ('i','szlMicrometers_cy')])
 
             # NOTE: rclBounds and rclFrame will be determined at
             # serialize time
@@ -611,7 +620,12 @@ class EMR:
     class POLYBEZIER(EMR_UNKNOWN):
         emr_id=2
         def __init__(self,points=[],bounds=(0,0,0,0)):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds',bounds),('i','cptl',len(points))])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBounds_left',bounds[0]),
+                ('i','rclBounds_top',bounds[1]),
+                ('i','rclBounds_right',bounds[2]),
+                ('i','rclBounds_bottom',bounds[3]),
+                ('i','cptl',len(points))])
             self.aptl=points
 
         def unserializeExtra(self,data):
@@ -655,7 +669,13 @@ class EMR:
     class POLYPOLYLINE(EMR_UNKNOWN):
         emr_id=7
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','nPolys'),('i','cptl')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBounds_left'),
+                ('i','rclBounds_top'),
+                ('i','rclBounds_right'),
+                ('i','rclBounds_bottom'),
+                ('i','nPolys'),
+                ('i','cptl')])
 
         def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
@@ -695,13 +715,17 @@ class EMR:
     class SETWINDOWEXTEX(EMR_UNKNOWN):
         emr_id=9
         def __init__(self,cx=0,cy=0):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('SIZEL','szlExtent',(cx,cy))])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','szlExtent_cx',cx),
+                ('i','szlExtent_cy',cy)])
 
 
     class SETWINDOWORGEX(EMR_UNKNOWN):
         emr_id=10
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('POINTL','ptlOrigin')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','ptlOrigin_x'),
+                ('i','ptlOrigin_y')])
 
 
     class SETVIEWPORTEXTEX(SETWINDOWEXTEX):
@@ -734,7 +758,10 @@ class EMR:
     class SETPIXELV(EMR_UNKNOWN):
         emr_id=15
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('POINTL','ptlPixel'),('i','crColor')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','ptlPixel_x'),
+                ('i','ptlPixel_y'),
+                ('i','crColor')])
 
 
     class SETMAPPERFLAGS(EMR_UNKNOWN):
@@ -783,7 +810,8 @@ class EMR:
     class SETTEXTCOLOR(EMR_UNKNOWN):
         emr_id=24
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','crColor',RGB(0,0,0))])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','crColor',RGB(0,0,0))])
 
 
     class SETBKCOLOR(SETTEXTCOLOR):
@@ -797,7 +825,9 @@ class EMR:
     class MOVETOEX(EMR_UNKNOWN):
         emr_id=27
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('POINTL','ptl')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','ptl_x'),
+                ('i','ptl_y')])
 
 
 #define EMR_SETMETARGN	28
@@ -831,12 +861,25 @@ class EMR:
     class SETWORLDTRANSFORM(EMR_UNKNOWN):
         emr_id=35
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('XFORM','xform')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('f','eM11'),
+                ('f','eM12'),
+                ('f','eM21'),
+                ('f','eM22'),
+                ('f','eDx'),
+                ('f','eDy')])
 
     class MODIFYWORLDTRANSFORM(EMR_UNKNOWN):
         emr_id=36
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('XFORM','xform'),('i','iMode')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('f','eM11'),
+                ('f','eM12'),
+                ('f','eM21'),
+                ('f','eM22'),
+                ('f','eDx'),
+                ('f','eDy'),
+                ('i','iMode')])
 
 
     class SELECTOBJECT(EMR_UNKNOWN):
@@ -850,7 +893,12 @@ class EMR:
     class CREATEPEN(EMR_UNKNOWN):
         emr_id=38
         def __init__(self,dc=None,style=PS_SOLID,width=1,color=0):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihPen',0),('LOGPEN','lopn',(style,width,0,color))])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','ihPen',0),
+                ('i','lopn_style',style),
+                ('i','lopn_width',width),
+                ('i','lopn_unused',0),
+                ('i','lopn_color',color)])
             if dc:
                 handle=dc.addObject(self)
                 self.ihPen=handle
@@ -858,7 +906,11 @@ class EMR:
     class CREATEBRUSHINDIRECT(EMR_UNKNOWN):
         emr_id=39
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihBrush'),('I','lbStyle'),('i','lbColor'),('I','lbHatch')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','ihBrush'),
+                ('I','lbStyle'),
+                ('i','lbColor'),
+                ('I','lbHatch')])
 
 
     class DELETEOBJECT(SELECTOBJECT):
@@ -869,13 +921,22 @@ class EMR:
     class ANGLEARC(EMR_UNKNOWN):
         emr_id=41
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('POINTL','ptlCenter'),('i','nRadius'),('f','eStartAngle'),('f','eSweepAngle')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','ptlCenter_x'),
+                ('i','ptlCenter_y'),
+                ('i','nRadius'),
+                ('f','eStartAngle'),
+                ('f','eSweepAngle')])
 
 
     class ELLIPSE(EMR_UNKNOWN):
         emr_id=42
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBox')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBox_left'),
+                ('i','rclBox_top'),
+                ('i','rclBox_right'),
+                ('i','rclBox_bottom')])
 
 
     class RECTANGLE(ELLIPSE):
@@ -886,13 +947,27 @@ class EMR:
     class ROUNDRECT(EMR_UNKNOWN):
         emr_id=44
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBox'),('SIZEL','szlCorner')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBox_left'),
+                ('i','rclBox_top'),
+                ('i','rclBox_right'),
+                ('i','rclBox_bottom'),
+                ('i','szlCorner_cx'),
+                ('i','szlCorner_cy')])
 
 
     class ARC(EMR_UNKNOWN):
         emr_id=45
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBox'),('POINTL','ptlStart'),('POINTL','ptlEnd')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBox_left'),
+                ('i','rclBox_top'),
+                ('i','rclBox_right'),
+                ('i','rclBox_bottom'),
+                ('i','ptlStart_x'),
+                ('i','ptlStart_y'),
+                ('i','ptlEnd_x'),
+                ('i','ptlEnd_y')])
 
     class CHORD(ARC):
         emr_id=46
@@ -958,7 +1033,11 @@ class EMR:
     class FILLPATH(EMR_UNKNOWN):
         emr_id=62
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBounds_left'),
+                ('i','rclBounds_top'),
+                ('i','rclBounds_right'),
+                ('i','rclBounds_bottom')])
         
 
     class STROKEANDFILLPATH(FILLPATH):
@@ -1011,14 +1090,64 @@ class EMR:
         # strings.
         
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('i','ihFont'),('EXTLOGFONTW','elfw')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','ihFont'),
+                ('i','lfHeight'),
+                ('i','lfWidth'),
+                ('i','lfEscapement'),
+                ('i','lfOrientation'),
+                ('i','lfWeight'),
+                ('B','lfItalic'),
+                ('B','lfUnderline'),
+                ('B','lfStrikeOut'),
+                ('B','lfCharSet'),
+                ('B','lfOutPrecision'),
+                ('B','lfClipPrecision'),
+                ('B','lfQuality'),
+                ('B','lfPitchAndFamily'),
+                ('64s','lfFaceName'), # really a 32 char unicode string
+                ('128s','elfFullName'), # really 64 char unicode string
+                ('64s','elfStyle'), # really 32 char unicode string
+                ('i','elfVersion'),
+                ('i','elfStyleSize'),
+                ('i','elfMatch'),
+                ('i','elfReserved'),
+                ('i','elfVendorId'),
+                ('i','elfCulture'),
+                ('B','elfPanose_bFamilyType'),
+                ('B','elfPanose_bSerifStyle'),
+                ('B','elfPanose_bWeight'),
+                ('B','elfPanose_bProportion'),
+                ('B','elfPanose_bContrast'),
+                ('B','elfPanose_bStrokeVariation'),
+                ('B','elfPanose_bArmStyle'),
+                ('B','elfPanose_bLetterform'),
+                ('B','elfPanose_bMidline'),
+                ('B','elfPanose_bXHeight')])
 
 
 
     class EXTTEXTOUTA(EMR_UNKNOWN):
         emr_id=83
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','iGraphicsMode'),('f','exScale'),('f','eyScale'),('EMRTEXT','emrtext')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBounds_left'),
+                ('i','rclBounds_top'),
+                ('i','rclBounds_right'),
+                ('i','rclBounds_bottom'),
+                ('i','iGraphicsMode'),
+                ('f','exScale'),
+                ('f','eyScale'),
+                ('i','emrtext_ptlReference_x'),
+                ('i','emrtext_ptlReference_y'),
+                ('i','emrtext_nChars'),
+                ('i','emrtext_offString'),
+                ('i','emrtext_fOptions'),
+                ('i','emrtext_rcl_left'),
+                ('i','emrtext_rcl_top'),
+                ('i','emrtext_rcl_right'),
+                ('i','emrtext_rcl_bottom'),
+                ('i','emrtext_offDx')])
             self.string=""
             self.charsize=1
 
@@ -1088,7 +1217,12 @@ class EMR:
     class POLYBEZIER16(EMR_UNKNOWN):
         emr_id=85
         def __init__(self,points=[],bounds=(0,0,0,0)):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds',bounds),('i','cpts',len(points))])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBounds_left',bounds[0]),
+                ('i','rclBounds_top',bounds[1]),
+                ('i','rclBounds_right',bounds[2]),
+                ('i','rclBounds_bottom',bounds[3]),
+                ('i','cpts',len(points))])
             self.apts=points
 
         def unserializeExtra(self,data):
@@ -1132,7 +1266,13 @@ class EMR:
     class POLYPOLYLINE16(EMR_UNKNOWN):
         emr_id=90
         def __init__(self):
-            EMR_UNKNOWN.__init__(self,self.emr_id,[('RECTL','rclBounds'),('i','nPolys'),('i','cpts')])
+            EMR_UNKNOWN.__init__(self,self.emr_id,[
+                ('i','rclBounds_left'),
+                ('i','rclBounds_top'),
+                ('i','rclBounds_right'),
+                ('i','rclBounds_bottom'),
+                ('i','nPolys'),
+                ('i','cpts')])
 
         def unserializeExtra(self,data):
             print "found %d extra bytes." % len(data)
