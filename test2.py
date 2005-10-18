@@ -96,5 +96,5 @@ for face in fontlist:
     fonty+=25;
 
 ret=emf.save("test2.emf")
-print "SaveEMF returns %d" % ret
+print "SaveEMF returns %s" % str(ret)
 
