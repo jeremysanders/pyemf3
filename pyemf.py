@@ -867,8 +867,11 @@ class EMR:
                 ('i','ptlPixel_y'),
                 ('i','crColor')]
         
-        def __init__(self):
+        def __init__(self,x=0,y=0,color=0):
             EMR_UNKNOWN.__init__(self)
+            self.ptlPixel_x=x
+            self.ptlPixel_y=y
+            self.crColor=color
 
 
     class SETMAPPERFLAGS(EMR_UNKNOWN):
@@ -1011,7 +1014,10 @@ class EMR:
 
     class SELECTOBJECT(EMR_UNKNOWN):
         emr_id=37
-        emr_typedef=[('i','handle')]
+
+        # handle must be unsigned to handle stock objects, which have
+        # their high order bit set.
+        emr_typedef=[('I','handle')]
         
         def __init__(self,dc=None,handle=0):
             EMR_UNKNOWN.__init__(self)
@@ -1699,6 +1705,7 @@ integer coordinates.
                 fh.close()
                 return True
             except:
+                raise
                 return False
         return False
         
@@ -1795,7 +1802,9 @@ include (at least) the following:
 @type obj: int
 
         """
-        pass
+        if obj>=0 and obj<=STOCK_LAST:
+            return obj|0x80000000
+        raise IndexError("Undefined stock object.")
 
     def SelectObject(self,handle):
         """
@@ -1811,10 +1820,7 @@ Make the given graphics object current.
 @type handle: int
 
         """
-        e=EMR.SELECTOBJECT(self.dc,handle)
-        if not self._append(e):
-            return 0
-        return 1
+        return self._append(EMR.SELECTOBJECT(self.dc,handle))
 
     def DeleteObject(self,obj):
         """
@@ -2133,7 +2139,8 @@ Set the pixel to the given color.
 @type color: int
 
         """
-        pass
+        return self._append(EMR.SETPIXELV(x,y,normalizeColor(color)))
+
     def Polyline(self,points):
         """
 
@@ -2184,10 +2191,7 @@ Draw an ellipse using the current pen.
 @type bottom: int
 
         """
-        e=EMR.ELLIPSE((left,top,right,bottom))
-        if not self._append(e):
-            return 0
-        return 1
+        return self._append(EMR.ELLIPSE((left,top,right,bottom)))
         
     def Rectangle(self,left,top,right,bottom):
         """
