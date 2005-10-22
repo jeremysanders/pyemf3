@@ -1559,7 +1559,7 @@ User interface to EMF creation.
 @group Drawing Parameters: RGB, GetStockObject, SelectObject, DeleteObject, Crea
 tePen, CreateSolidBrush, SetBkColor, SetBkMode, SetPolyFillMode
 @group Drawing Primitives: SetPixel, Polyline, Polygon, Rectangle, RoundRect, Ellipse, Arc, Chord, Pie, PolyBezier
-@group Path Primatives: BeginPath, EndPath, MoveToEx, LineTo, PolylineTo, ArcTo,
+@group Path Primatives: BeginPath, EndPath, MoveTo, LineTo, PolylineTo, ArcTo,
  PolyBezierTo, CloseFigure, FillPath, StrokePath
 @group Text: CreateFont, SetTextAlign, SetTextColor, TextOut
 @group Viewport Manipulation: SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx
@@ -1882,6 +1882,9 @@ Create a solid brush used to fill polygons.
         """
 
 Create a hatched brush used to fill polygons.
+
+B{Note:} Does not appear to work in OpenOffice.
+
 @param hatch: integer representing type of fill:
  - HS_HORIZONTAL
  - HS_VERTICAL  
@@ -2271,6 +2274,65 @@ rays are coincident, a complete ellipse is drawn.
         return self._append(EMR.ARC(left,top,right,bottom,
                                     xstart,ystart,xend,yend))
 
+    def Chord(self,left,top,right,bottom,xstart,ystart,xend,yend):
+        """
+
+Draw a chord of an ellipse.  A chord is a closed region bounded by an
+arc and the [straight] line between the two points that define the arc
+start and end.  The arc start and end points are defined as in L{Arc}.
+
+@param left: x position of left edge of arc box.
+@param top: y position of top edge of arc box.
+@param right: x position of right edge of arc box.
+@param bottom: y position bottom edge of arc box.
+@param xstart: x position of arc start.
+@param ystart: y position of arc start.
+@param xend: x position of arc end.
+@param yend: y position of arc end.
+@return: true if arc was successfully rendered.
+@rtype: int
+@type left: int
+@type top: int
+@type right: int
+@type bottom: int
+@type xstart: int
+@type ystart: int
+@type xend: int
+@type yend: int
+
+        """
+        return self._append(EMR.CHORD(left,top,right,bottom,
+                                    xstart,ystart,xend,yend))
+
+    def Pie(self,left,top,right,bottom,xstart,ystart,xend,yend):
+        """
+
+Draw a pie slice of an ellipse.  The ellipse is specified as in
+L{Arc}, and it is filled with the current brush.
+
+@param left: x position of left edge of arc box.
+@param top: y position of top edge of arc box.
+@param right: x position of right edge of arc box.
+@param bottom: y position bottom edge of arc box.
+@param xstart: x position of arc start.
+@param ystart: y position of arc start.
+@param xend: x position of arc end.
+@param yend: y position of arc end.
+@return: true if arc was successfully rendered.
+@rtype: int
+@type left: int
+@type top: int
+@type right: int
+@type bottom: int
+@type xstart: int
+@type ystart: int
+@type xend: int
+@type yend: int
+
+        """
+        return self._append(EMR.PIE(left,top,right,bottom,
+                                    xstart,ystart,xend,yend))
+
     def PolyBezier(self,points):
         """
 
@@ -2407,7 +2469,7 @@ L{PolylineTo}, etc. will follow from the end of the curve.
     def CloseFigure(self):
         """
 
-Close a currently open path, which connects the current position to the starting position of a figure.  Usually the starting position is the most recent call to L{MoveToEx}.
+Close a currently open path, which connects the current position to the starting position of a figure.  Usually the starting position is the most recent call to L{MoveTo} after L{BeginPath}.
 
 @return: true if successful
 
@@ -2618,28 +2680,22 @@ other text attributes.
 
 
 
-
-##    # Do some optimization here, like convert to 16 bit values if possible, and convert to a rectangle if it is a rectangle
-##    def Polygon(self,points):
-##        if len(points)==4:
-##            if points[0][0]==points[1][0] and points[2][0]==points[3][0] and points[0][1]==points[3][1] and points[1][1]==points[2][1]:
-##                print "converting to rectangle, option 1:"
-##                pyemf.Rectangle(self.dc,points[0][0],points[0][1],points[2][0],points[2][1])
-##                return
-##            elif points[0][1]==points[1][1] and points[2][1]==points[3][1] and points[0][0]==points[3][0] and points[1][0]==points[2][0]:
-##                print "converting to rectangle, option 2:"
-##                pyemf.Rectangle(self.dc,points[0][0],points[0][1],points[2][0],points[2][1])
-##                return
-
-    
-
-
 if __name__ == "__main__":
-    from optparse import OptionParser
+    try:
+        from optparse import OptionParser
 
-    parser=OptionParser(usage="usage: %prog [options] emf-files...")
-    parser.add_option("-v", action="store_true", dest="verbose", default=False)
-    (options, args) = parser.parse_args()
+        parser=OptionParser(usage="usage: %prog [options] emf-files...")
+        parser.add_option("-v", action="store_true", dest="verbose", default=False)
+        (options, args) = parser.parse_args()
+    except:
+        # hackola to work with Python 2.2, but this shouldn't be a
+        # factor when imported in normal programs because __name__
+        # will never equal "__main__", so this will never get called.
+        class data:
+            verbose=True
+
+        options=data()
+        args=sys.argv[1:]
 
     if len(args)>0:
         for filename in args:
