@@ -1883,7 +1883,7 @@ Create a solid brush used to fill polygons.
 
 Create a hatched brush used to fill polygons.
 
-B{Note:} Does not appear to work in OpenOffice.
+B{Note:} Currently appears unsupported in OpenOffice.
 
 @param hatch: integer representing type of fill:
  - HS_HORIZONTAL
@@ -2428,6 +2428,8 @@ connected to the previous position and the current position is updated
 to the end of the arc so subsequent path operations such as L{LineTo},
 L{PolylineTo}, etc. will connect to the end.
 
+B{Note:} Currently appears unsupported in OpenOffice.
+
 @param left: x position of left edge of arc box.
 @param top: y position of top edge of arc box.
 @param right: x position of right edge of arc box.
@@ -2448,7 +2450,9 @@ L{PolylineTo}, etc. will connect to the end.
 @type yend: int
 
         """
-        pass
+        return self._append(EMR.ARCTO(left,top,right,bottom,
+                                    xstart,ystart,xend,yend))
+
     def PolyBezierTo(self,points):
         """
 
@@ -2502,6 +2506,24 @@ selected pen.
         """
         bounds=self._getPathBounds()
         return self._append(EMR.STROKEPATH(bounds))
+
+    def StrokeAndFillPath(self):
+        """
+
+Close any currently open path, outlines it using the currently
+selected pen, and fills it using the current brush.  Same as stroking
+and filling using both the L{FillPath} and L{StrokePath} options,
+except that the pixels that would be in the overlap region to be both
+stroked and filled are optimized to be only stroked.
+
+B{Note:} Supported in OpenOffice 2.*, unsupported in OpenOffice 1.*.
+
+@return: true if successful.
+@rtype: int
+
+        """
+        bounds=self._getPathBounds()
+        return self._append(EMR.STROKEANDFILLPATH(bounds))
 
     def SetTextAlign(self,alignment):
         """
