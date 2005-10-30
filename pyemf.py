@@ -302,24 +302,31 @@ class _DC:
         # number, called "handle"
         self.objects=[]
         self.objects.append(None) # handle 0 is reserved
+        
+        # Maintain a stack that contains list of empty slots in object
+        # list resulting from deletes
+        self.objectholes=[]
 
-        # Reference sizes
-        self.ref_dev_width=1024
-        self.ref_dev_height=768
-        self.ref_mm_width=320
-        self.ref_mm_height=240
+        # Reference device size in pixels
+        self.ref_devwidth=1024
+        self.ref_devheight=768
+
+        # Reference device size in mm
+        self.ref_width=320 
+        self.ref_height=240
 
         # physical dimensions are in .01 mm units
+        self.width=0
+        self.height=0
         if units=='mm':
-            self.width=int(width*100)
-            self.height=int(height*100)
+            self.setPhysicalSize(0,0,int(width*100),int(height*100))
         else:
-            self.width=int(width*2540)
-            self.height=int(height*2540)
+            self.setPhysicalSize(0,0,int(width*2540),int(height*2540))
 
         # addressable pixel sizes
-        self.devwidth=int(width*density)
-        self.devheight=int(height*density)
+        self.devwidth=0
+        self.devheight=0
+        self.setDeviceSize(0,0,int(width*density),int(height*density))
             
         #self.text_alignment = TA_BASELINE;
         self.text_color = RGB(0,0,0);
@@ -328,10 +335,71 @@ class _DC:
         #self.polyfill_mode = ALTERNATE;
         #self.map_mode = MM_TEXT;
 
-    def addObject(self,emr):
-        i=len(self.objects)
-        self.objects.append(emr)
-        return i
+    def getBounds(self,header):
+        self.setPhysicalSize(header.rclFrame_left,header.rclFrame_top,
+                             header.rclFrame_right,header.rclFrame_bottom)
+        if header.szlMicrometers_cx>0:
+            self.ref_width=header.szlMicrometers_cx/10
+            self.ref_height=header.szlMicrometers_cy/10
+        else:
+            self.ref_width=header.szlMillimeters_cx*100
+            self.ref_height=header.szlMillimeters_cy*100
+
+        self.setDeviceSize(header.rclBounds_left,header.rclBounds_top,
+                           header.rclBounds_right,header.rclBounds_bottom)
+        self.ref_devwidth=header.szlDevice_cx
+        self.ref_devheight=header.szlDevice_cy
+
+    def setPhysicalSize(self,left,top,right,bottom):
+        self.width=right-left
+        self.height=bottom-top
+        self.frame_left=left
+        self.frame_top=top
+        self.frame_right=right
+        self.frame_bottom=bottom
+
+    def setDeviceSize(self,left,top,right,bottom):
+        self.devwidth=right-left
+        self.devheight=bottom-top
+        self.bounds_left=left
+        self.bounds_top=top
+        self.bounds_right=right
+        self.bounds_bottom=bottom
+                
+
+    def addObject(self,emr,handle=-1):
+        count=len(self.objects)
+        if handle>0:
+            print "Adding handle %s (%s)" % (handle,emr.__class__.__name__.lstrip('_'))
+            if handle>=count:
+                self.objects+=[None]*(handle-count+1)
+            self.objects[handle]=emr
+        elif self.objectholes:
+            handle=self.objectholes.pop()
+            self.objects[handle]=emr
+        else:
+            handle=count
+            self.objects.append(emr)
+        return handle
+
+    def removeObject(self,handle):
+        if handle<1 or handle>=len(self.objects):
+            raise IndexError("Invalid handle")
+        print "removing handle %d (%s)" % (handle,self.objects[handle].__class__.__name__.lstrip('_'))
+        self.objects[handle]=None
+        found=False
+
+        # insert handle in objectholes list, but keep object holes
+        # list in sorted order
+        i=0
+        while i<len(self.objectholes):
+            if handle<self.objectholes[i]:
+                self.objectholes.insert(i,handle)
+                break
+            i+=1
+        else:
+            self.objectholes.append(handle)
+        # print self.objectholes
 
     def popObject(self):
         """Remove last object.  Used mainly in case of error."""
@@ -391,6 +459,8 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
     def __init__(self):
         self.iType=self.__class__.emr_id
         self.nSize=0
+
+        self.verbose=0
         
         self.datasize=0
         self.data=None
@@ -555,7 +625,7 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
     def resize(self):
         before=self.nSize
         self.nSize=8+self.format.structsize+self.sizeExtra()
-        if before!=self.nSize:
+        if self.verbose and before!=self.nSize:
             print "resize: before=%d after=%d" % (before,self.nSize),
             print self
         if self.nSize%4 != 0:
@@ -683,20 +753,37 @@ class _EMR:
             txt.write("%s\n" % (struct.pack('16s',self.description.encode('utf-16'))))
             return txt.getvalue()
 
-        def setBounds(self,dc):
-            self.rclBounds_left=0
-            self.rclBounds_top=0
-            self.rclBounds_right=int(dc.width/100.0*dc.ref_dev_width/dc.ref_mm_width)
-            self.rclBounds_bottom=int(dc.height/100.0*dc.ref_dev_height/dc.ref_mm_height)
-            self.rclFrame_left=0
-            self.rclFrame_top=0
-            self.rclFrame_right=dc.width
-            self.rclFrame_bottom=dc.height
+        def setBounds(self,dc,scaleheader):
+            self.rclBounds_left=dc.bounds_left
+            self.rclBounds_top=dc.bounds_top
+            self.rclBounds_right=dc.bounds_right
+            self.rclBounds_bottom=dc.bounds_bottom
+            
+            self.rclFrame_left=dc.frame_left
+            self.rclFrame_top=dc.frame_top
+            self.rclFrame_right=dc.frame_right
+            self.rclFrame_bottom=dc.frame_bottom
+
+            if scaleheader:
+                self.szlDevice_cx=dc.devwidth
+                self.szlDevice_cy=dc.devheight
+                self.szlMicrometers_cx=dc.width*10
+                self.szlMicrometers_cy=dc.height*10
+            else:
+                self.szlDevice_cx=dc.ref_devwidth
+                self.szlDevice_cy=dc.ref_devheight
+                self.szlMicrometers_cx=dc.ref_width*10
+                self.szlMicrometers_cy=dc.ref_height*10
+                
+            self.szlMillimeters_cx=self.szlMicrometers_cx/1000
+            self.szlMillimeters_cy=self.szlMicrometers_cy/1000
+                
 
 
         def sizeExtra(self):
-            self.szlMicrometers_cx=self.szlMillimeters_cx*1000
-            self.szlMicrometers_cy=self.szlMillimeters_cy*1000
+            if self.szlMicrometers_cx==0:
+                self.szlMicrometers_cx=self.szlMillimeters_cx*1000
+                self.szlMicrometers_cy=self.szlMillimeters_cy*1000
 
             self.nDescription=len(self.description)
             if self.nDescription>0:
@@ -1602,13 +1689,18 @@ integer coordinates.
 
         self.verbose=verbose
 
+        # if True, scale the image using only the header, and not
+        # using MapMode or SetWindow/SetViewport.
+        self.scaleheader=True
+
         emr=_EMR._HEADER(description)
         self._append(emr)
-        self.SetMapMode(MM_ANISOTROPIC)
-        self.SetWindowExtEx(self.dc.devwidth,self.dc.devheight)
-        self.SetViewportExtEx(
-            int(self.dc.width/100.0*self.dc.ref_dev_width/self.dc.ref_mm_width),
-            int(self.dc.height/100.0*self.dc.ref_dev_height/self.dc.ref_mm_height))
+        if not self.scaleheader:
+            self.SetMapMode(MM_ANISOTROPIC)
+            self.SetWindowExtEx(self.dc.devwidth,self.dc.devheight)
+            self.SetViewportExtEx(
+                int(self.dc.width/100.0*self.dc.ref_devwidth/self.dc.ref_width),
+                int(self.dc.height/100.0*self.dc.ref_devheight/self.dc.ref_height))
 
 
     def load(self,filename=None):
@@ -1628,6 +1720,9 @@ object, they will be overwritten by the records from this file.
             fh=open(self.filename)
             self.records=[]
             self._unserialize(fh)
+            self.scaleheader=False
+            # get DC from header record
+            self.dc.getBounds(self.records[0])
 
 
     def _unserialize(self,fh):
@@ -1647,6 +1742,13 @@ object, they will be overwritten by the records from this file.
 
                     e.unserialize(fh,iType,nSize)
                     self.records.append(e)
+                    
+                    # FIXME: need to update handle record here
+                    if iType==38 or iType==39 or iType==82 or iType==83:
+                        self.dc.addObject(e,e.handle)
+                    elif iType==40:
+                        self.dc.removeObject(e.handle)
+                        
                     if self.verbose:
                         print "Unserializing: ",
                         print e
@@ -1679,7 +1781,7 @@ through all the records and gather info.
             e=_EMR._EOF()
             self._append(e)
         header=self.records[0]
-        header.setBounds(self.dc)
+        header.setBounds(self.dc,self.scaleheader)
         header.nRecords=len(self.records)
         header.nHandles=len(self.dc.objects)
         size=0
@@ -1827,21 +1929,24 @@ Make the given graphics object current.
         """
         return self._append(_EMR._SELECTOBJECT(self.dc,handle))
 
-    def DeleteObject(self,obj):
+    def DeleteObject(self,handle):
         """
 
 Delete the given graphics object. Note that, now, only those contexts
 into which the object has been selected get a delete object
 records.
 
-@param    obj:  	handle of graphics object to delete.
+@param    handle:  	handle of graphics object to delete.
 
 @return:    true if the object was successfully deleted.
 @rtype: int
-@type obj: int
+@type handle: int
 
         """
-        pass
+        e=_EMR._DELETEOBJECT(self.dc,handle)
+        self.dc.removeObject(handle)
+        return self._append(e)
+
     def CreatePen(self,style,width,color):
         """
 
@@ -2728,9 +2833,9 @@ if __name__ == "__main__":
         for filename in args:
             e=EMF(verbose=options.verbose)
             e.load(filename)
-            print "Saving %s..." % (filename+".out")
-            e.save(filename+".out")
-            print "%s saved successfully." % (filename+".out")
+            print "Saving %s..." % (filename+".out.emf")
+            e.save(filename+".out.emf")
+            print "%s saved successfully." % (filename+".out.emf")
     else:
         e=EMF(verbose=options.verbose)
         e.save("new.emf")
