@@ -370,7 +370,7 @@ class _DC:
     def addObject(self,emr,handle=-1):
         count=len(self.objects)
         if handle>0:
-            print "Adding handle %s (%s)" % (handle,emr.__class__.__name__.lstrip('_'))
+            # print "Adding handle %s (%s)" % (handle,emr.__class__.__name__.lstrip('_'))
             if handle>=count:
                 self.objects+=[None]*(handle-count+1)
             self.objects[handle]=emr
@@ -385,7 +385,7 @@ class _DC:
     def removeObject(self,handle):
         if handle<1 or handle>=len(self.objects):
             raise IndexError("Invalid handle")
-        print "removing handle %d (%s)" % (handle,self.objects[handle].__class__.__name__.lstrip('_'))
+        # print "removing handle %d (%s)" % (handle,self.objects[handle].__class__.__name__.lstrip('_'))
         self.objects[handle]=None
         found=False
 
@@ -476,7 +476,7 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
         # superclasses, so we have to check if this is a subclass with
         # a different typedef
         if self.__class__.format==None or self.__class__.emr_typedef != self.format.typedef:
-            print "creating format for %d" % self.__class__.emr_id
+            if self.verbose: print "creating format for %d" % self.__class__.emr_id
             self.__class__.format=_EMR_FORMAT(self.__class__.emr_id,self.__class__.emr_typedef)
 
         # list of values parsed from the input stream
@@ -736,7 +736,7 @@ class _EMR:
             self.nDescription=len(self.description)
 
         def unserializeExtra(self,data):
-            print "found %d extra bytes." % len(data)
+            if self.verbose: print "found %d extra bytes." % len(data)
 
             # FIXME: descriptionStart could potentially be negative if
             # we have an old format metafile without stuff after
@@ -745,7 +745,7 @@ class _EMR:
                 start=self.unserializeOffset(self.offDescription)
                 txt=data[start:start+(2*self.nDescription)]
                 self.description=txt.decode('utf-16')
-                print "str: %s" % self.description
+                if self.verbose: print "str: %s" % self.description
 
         def str_extra(self):
             txt=StringIO()
@@ -814,11 +814,11 @@ class _EMR:
             self.aptl=points
 
         def unserializeExtra(self,data):
-            print "found %d extra bytes." % len(data)
+            # print "found %d extra bytes." % len(data)
 
             start=0
             start,self.aptl=self.unserializePoints("i",self.cptl,data,start)
-            #print "apts size=%d: %s" % (len(self.apts),self.apts)
+            # print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def sizeExtra(self):
             return struct.calcsize("i")*2*self.cptl
@@ -864,14 +864,14 @@ class _EMR:
             _EMR_UNKNOWN.__init__(self)
 
         def unserializeExtra(self,data):
-            print "found %d extra bytes." % len(data)
+            # print "found %d extra bytes." % len(data)
 
             start=0
             start,self.aPolyCounts=self.unserializeList("i",self.nPolys,data,start)
-            #print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
+            # print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
 
             start,self.aptl=self.unserializePoints("i",self.cptl,data,start)
-            #print "apts size=%d: %s" % (len(self.apts),self.apts)
+            # print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def sizeExtra(self):
             return (struct.calcsize("i")*self.nPolys +
@@ -1452,10 +1452,10 @@ class _EMR:
             self.dx=[]
 
         def unserializeExtra(self,data):
-            print "found %d extra bytes.  nChars=%d" % (len(data),self.nChars)
+            # print "found %d extra bytes.  nChars=%d" % (len(data),self.nChars)
 
             start=0
-            print "offDx=%d offString=%d" % (self.offDx,self.offString)
+            # print "offDx=%d offString=%d" % (self.offDx,self.offString)
 
             # Note: offsets may appear before OR after string.  Don't
             # assume they will appear first.
@@ -1533,11 +1533,11 @@ class _EMR:
             self.apts=points
 
         def unserializeExtra(self,data):
-            print "found %d extra bytes." % len(data)
+            # print "found %d extra bytes." % len(data)
 
             start=0
             start,self.apts=self.unserializePoints("h",self.cpts,data,start)
-            #print "apts size=%d: %s" % (len(self.apts),self.apts)
+            # print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def sizeExtra(self):
             return (struct.calcsize("h")*2*self.cpts)
@@ -1583,14 +1583,14 @@ class _EMR:
             _EMR_UNKNOWN.__init__(self)
 
         def unserializeExtra(self,data):
-            print "found %d extra bytes." % len(data)
+            # print "found %d extra bytes." % len(data)
 
             start=0
             start,self.aPolyCounts=self.unserializeList("i",self.nPolys,data,start)
-            #print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
+            # print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
 
             start,self.apts=self.unserializePoints("h",self.cpts,data,start)
-            #print "apts size=%d: %s" % (len(self.apts),self.apts)
+            # print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def sizeExtra(self):
             return (struct.calcsize("i")*self.nPolys +
@@ -1746,7 +1746,6 @@ object, they will be overwritten by the records from this file.
                     e.unserialize(fh,iType,nSize)
                     self.records.append(e)
                     
-                    # FIXME: need to update handle record here
                     if iType==38 or iType==39 or iType==82 or iType==83:
                         self.dc.addObject(e,e.handle)
                     elif iType==40:
@@ -1848,7 +1847,7 @@ Write the EMF to disk.
         """Get the bounding rectangle for the list of EMR records
         starting from the last saved path start to the current record."""
         for i in range(self.pathstart,len(self.records)):
-            print "checking record %d" % i
+            print "FIXME: checking record %d" % i
         return (0,0,-1,-1)
 
     def _useShort(self,bounds):
