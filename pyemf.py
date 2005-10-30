@@ -1476,22 +1476,25 @@ class _EMR:
             sizedx=0
             sizestring=0
 
-            if len(self.dx)>0:
-                self.offDx=offset
-                sizedx=struct.calcsize("i")*self.nChars
-                offset+=sizedx
             if len(self.string)>0:
                 self.nChars=len(self.string)/self.charsize
                 self.offString=offset
                 sizestring=_round4(self.charsize*self.nChars)
+                offset+=sizestring
+            if len(self.dx)>0:
+                self.offDx=offset
+                sizedx=struct.calcsize("i")*self.nChars
+                offset+=sizedx
                 
             return (sizedx+sizestring)
 
         def serializeExtra(self,fh):
-            if self.offDx>0:
-                self.serializeList(fh,"i",self.dx)
+            # apparently the preferred way is to store the string
+            # first, then the offsets
             if self.offString>0:
                 self.serializeString(fh,self.string)
+            if self.offDx>0:
+                self.serializeList(fh,"i",self.dx)
 
         def str_extra(self):
             txt=StringIO()
