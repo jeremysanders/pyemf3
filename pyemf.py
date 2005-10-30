@@ -806,6 +806,7 @@ class _EMR:
                      ('i','rclBounds_right'),
                      ('i','rclBounds_bottom'),
                      ('i','cptl')]
+        emr_point_type='i'
         
         def __init__(self,points=[],bounds=(0,0,0,0)):
             _EMR_UNKNOWN.__init__(self)
@@ -817,14 +818,15 @@ class _EMR:
             # print "found %d extra bytes." % len(data)
 
             start=0
-            start,self.aptl=self.unserializePoints("i",self.cptl,data,start)
+            start,self.aptl=self.unserializePoints(self.emr_point_type,
+                                                   self.cptl,data,start)
             # print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def sizeExtra(self):
-            return struct.calcsize("i")*2*self.cptl
+            return struct.calcsize(self.emr_point_type)*2*self.cptl
 
         def serializeExtra(self,fh):
-            self.serializePoints(fh,"i",self.aptl)
+            self.serializePoints(fh,self.emr_point_type,self.aptl)
 
         def str_extra(self):
             txt=StringIO()
@@ -859,6 +861,7 @@ class _EMR:
                      ('i','rclBounds_bottom'),
                      ('i','nPolys'),
                      ('i','cptl')]
+        emr_point_type='i'
         
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
@@ -870,16 +873,16 @@ class _EMR:
             start,self.aPolyCounts=self.unserializeList("i",self.nPolys,data,start)
             # print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
 
-            start,self.aptl=self.unserializePoints("i",self.cptl,data,start)
+            start,self.aptl=self.unserializePoints(self.emr_point_type,self.cptl,data,start)
             # print "apts size=%d: %s" % (len(self.apts),self.apts)
 
         def sizeExtra(self):
             return (struct.calcsize("i")*self.nPolys +
-                    struct.calcsize("i")*2*self.cptl)
+                    struct.calcsize(self.emr_point_type)*2*self.cptl)
 
         def serializeExtra(self,fh):
             self.serializeList(fh,"i",self.aPolyCounts)
-            self.serializePoints(fh,"i",self.aptl)
+            self.serializePoints(fh,self.emr_point_type,self.aptl)
 
         def str_extra(self):
             txt=StringIO()
@@ -1517,40 +1520,9 @@ class _EMR:
 
 
 
-    class _POLYBEZIER16(_EMR_UNKNOWN):
-        # FIXME: subclass from POLYBEZIER
+    class _POLYBEZIER16(_POLYBEZIER):
         emr_id=85
-        emr_typedef=[
-                ('i','rclBounds_left'),
-                ('i','rclBounds_top'),
-                ('i','rclBounds_right'),
-                ('i','rclBounds_bottom'),
-                ('i','cpts')]
-        def __init__(self,points=[],bounds=(0,0,0,0)):
-            _EMR_UNKNOWN.__init__(self)
-            self.setBounds(bounds)
-            self.cpts=len(points)
-            self.apts=points
-
-        def unserializeExtra(self,data):
-            # print "found %d extra bytes." % len(data)
-
-            start=0
-            start,self.apts=self.unserializePoints("h",self.cpts,data,start)
-            # print "apts size=%d: %s" % (len(self.apts),self.apts)
-
-        def sizeExtra(self):
-            return (struct.calcsize("h")*2*self.cpts)
-
-        def serializeExtra(self,fh):
-            self.serializePoints(fh,"h",self.apts)
-
-        def str_extra(self):
-            txt=StringIO()
-            start=0
-            txt.write("\tpoints: %s\n" % str(self.apts))
-                    
-            return txt.getvalue()
+        emr_point_type='h'
 
     class _POLYGON16(_POLYBEZIER16):
         emr_id=86
@@ -1567,49 +1539,12 @@ class _EMR:
     class _POLYLINETO16(_POLYBEZIER16):
         emr_id=89
         pass
-    
 
-
-    class _POLYPOLYLINE16(_EMR_UNKNOWN):
+    class _POLYPOLYLINE16(_POLYPOLYLINE):
         emr_id=90
-        emr_typedef=[
-                ('i','rclBounds_left'),
-                ('i','rclBounds_top'),
-                ('i','rclBounds_right'),
-                ('i','rclBounds_bottom'),
-                ('i','nPolys'),
-                ('i','cpts')]
-        def __init__(self):
-            _EMR_UNKNOWN.__init__(self)
-
-        def unserializeExtra(self,data):
-            # print "found %d extra bytes." % len(data)
-
-            start=0
-            start,self.aPolyCounts=self.unserializeList("i",self.nPolys,data,start)
-            # print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
-
-            start,self.apts=self.unserializePoints("h",self.cpts,data,start)
-            # print "apts size=%d: %s" % (len(self.apts),self.apts)
-
-        def sizeExtra(self):
-            return (struct.calcsize("i")*self.nPolys +
-                    struct.calcsize("h")*2*self.cpts)
-
-        def serializeExtra(self,fh):
-            self.serializeList(fh,"i",self.aPolyCounts)
-            self.serializePoints(fh,"h",self.apts)
-
-        def str_extra(self):
-            txt=StringIO()
-            start=0
-            for n in range(self.nPolys):
-                txt.write("\tPolygon %d: %d points\n" % (n,self.aPolyCounts[n]))
-                txt.write("\t\t%s\n" % str(self.apts[start:start+self.aPolyCounts[n]]))
-                start+=self.aPolyCounts[n]
-                    
-            return txt.getvalue()
-
+        emr_point_type='h'
+        pass
+    
     class _POLYPOLYGON16(_POLYPOLYLINE16):
         emr_id=91
         pass
