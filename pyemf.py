@@ -529,6 +529,10 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
         self.rclBounds_right=bounds[2]
         self.rclBounds_bottom=bounds[3]
 
+    def getBounds(self):
+        """Return bounds of object, or None if not applicable."""
+        return None
+
     def unserialize(self,fh,itype=-1,nsize=-1):
         """Read data from the file object and, using the format
         structure defined by the subclass, parse the data and store it
@@ -849,9 +853,12 @@ class _EMR:
 
     class _POLYBEZIERTO(_POLYBEZIER):
         emr_id=5
-        pass
 
-    class _POLYLINETO(_POLYBEZIER):
+        def getBounds(self):
+            return (self.rclBounds_left,self.rclBounds_top,
+                    self.rclBounds_right,self.rclBounds_bottom)
+
+    class _POLYLINETO(_POLYBEZIERTO):
         emr_id=6
         pass
     
@@ -1044,6 +1051,9 @@ class _EMR:
             _EMR_UNKNOWN.__init__(self)
             self.ptl_x=x
             self.ptl_y=y
+
+        def getBounds(self):
+            return (self.ptl_x,self.ptl_y,self.ptl_x,self.ptl_y)
             
 
 #define EMR_SETMETARGN	28
@@ -1267,7 +1277,15 @@ class _EMR:
 
     class _ARCTO(_ARC):
         emr_id=55
-        pass
+
+        def getBounds(self):
+            # not exactly the bounds, because the arc may actually use
+            # less of the ellipse than is specified by the bounds.
+            # But at least the actual bounds aren't outside these
+            # bounds.
+            return (self.rclBox_left,self.rclBox_top,
+                    self.rclBox_right,self.rclBox_bottom)
+
 
 
 #define EMR_POLYDRAW	56
@@ -1536,11 +1554,12 @@ class _EMR:
         emr_id=87
         pass
 
-    class _POLYBEZIERTO16(_POLYBEZIER16):
+    class _POLYBEZIERTO16(_POLYBEZIERTO):
         emr_id=88
+        emr_point_type='h'
         pass
 
-    class _POLYLINETO16(_POLYBEZIER16):
+    class _POLYLINETO16(_POLYBEZIERTO16):
         emr_id=89
         pass
 
@@ -1782,12 +1801,28 @@ Write the EMF to disk.
                 bottom=y
         return (left,top,right,bottom)
 
+    def _mergeBounds(self,bounds,itembounds):
+        if itembounds:
+            if itembounds[0]<bounds[0]: bounds[0]=itembounds[0]
+            if itembounds[1]<bounds[1]: bounds[1]=itembounds[1]
+            if itembounds[2]>bounds[2]: bounds[2]=itembounds[2]
+            if itembounds[3]>bounds[3]: bounds[3]=itembounds[3]
+
     def _getPathBounds(self):
         """Get the bounding rectangle for the list of EMR records
         starting from the last saved path start to the current record."""
+        big=1000000
+        bounds=[big,big,-1,-1]
         for i in range(self.pathstart,len(self.records)):
-            print "FIXME: checking record %d" % i
-        return (0,0,-1,-1)
+            # print "FIXME: checking record %d" % i
+            e=self.records[i]
+            # print e
+            # print "bounds=%s" % str(e.getBounds())
+            self._mergeBounds(bounds,e.getBounds())
+
+        if bounds[0]==big: bounds[0]=0
+        if bounds[1]==big: bounds[1]=0
+        return bounds
 
     def _useShort(self,bounds):
         """Determine if we can use the shorter 16-bit EMR structures.
@@ -2007,27 +2042,6 @@ other edges.
             return 0
         return 1
 
-    def GetDeviceCaps(self):
-        """
-
-Return various information about the "capabilities" of the device
-context. This is wholly fabricated for the metafile (i.e., there is
-no real device to which these attributes relate).
-
-@return: Capability dictionary; note that to conform with ECMA documentation, the key names are in upper case:
- - B{DRIVERVERSION} - Device driver version number.  Value is always 1.
- - B{TECHNOLOGY} - Device technology available.  Always returns DT_METAFILE
- - B{HORZSIZE} - Horizontal size of reference device in millimeters.
- - B{VERTSIZE} - Vertical size in millimeters.
- - B{HORZRES} - Horizontal size in device units (pixels).
- - B{VERTRES} - Vertical size in device units (pixels).
- - B{LOGPIXELSX} - Number of horizontal pixels per inch.
- - B{LOGPIXELSY} - Number of vertical pixels per inch.
- 
-@rtype: C{dict}
-
-        """
-        pass
     def SetMapMode(self,mode):
         """
 
@@ -2053,8 +2067,7 @@ Set the window mapping mode. (OpenOffice supports at least MM_ANISOTROPIC.)
     def SetViewportOrgEx(self,x,y):
         """
 
-Set the origin of the viewport. (Not entirely sure if this is honored
-by StarOffice.)
+Set the origin of the viewport.
 @param x: new x position of the viewport origin.
 @param y: new y position of the viewport origin.
 @return: previous viewport origin
@@ -2543,7 +2556,8 @@ selected brush and polygon fill mode.
 @rtype: int
 
         """
-        return self._append(_EMR._FILLPATH())
+        bounds=self._getPathBounds()
+        return self._append(_EMR._FILLPATH(bounds))
 
     def StrokePath(self):
         """
