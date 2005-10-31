@@ -1681,7 +1681,7 @@ object, they will be overwritten by the records from this file.
                     e.unserialize(fh,iType,nSize)
                     self.records.append(e)
                     
-                    if iType==38 or iType==39 or iType==82 or iType==83:
+                    if iType==38 or iType==39 or iType==82:
                         self.dc.addObject(e,e.handle)
                     elif iType==40:
                         self.dc.removeObject(e.handle)
