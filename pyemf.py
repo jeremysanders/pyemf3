@@ -621,10 +621,7 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
 
     def serializeString(self,fh,txt):
         if isinstance(txt,unicode):
-            # convert to unicode and throw away first two byte
-            # signature.  FIXME: need to check if we're on a
-            # big-endian machine.
-            txt=txt.encode('utf-16')[2:]
+            txt=txt.encode('utf-16le')
         fh.write(txt)
         extra=_round4(len(txt))-len(txt)
         if extra>0:
@@ -663,7 +660,7 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
         if name.endswith("olor"):
             val=self.str_color(val)
         elif typecode.endswith("s"):
-            val=val.decode('utf-16')
+            val=val.decode('utf-16le')
         return val
     
     def str_details(self):
@@ -751,14 +748,15 @@ class _EMR:
             # szlMillimeters AND we have a description.
             if self.offDescription>0:
                 start=self.unserializeOffset(self.offDescription)
+                # unicode is always stored in little endian format
                 txt=data[start:start+(2*self.nDescription)]
-                self.description=txt.decode('utf-16')
+                self.description=txt.decode('utf-16le')
                 if self.verbose: print "str: %s" % self.description
 
         def str_extra(self):
             txt=StringIO()
             txt.write("\tunicode string: %s\n" % str(self.description))
-            txt.write("%s\n" % (struct.pack('16s',self.description.encode('utf-16'))))
+            txt.write("%s\n" % (struct.pack('16s',self.description.encode('utf-16le'))))
             return txt.getvalue()
 
         def setBounds(self,dc,scaleheader):
@@ -1440,7 +1438,7 @@ class _EMR:
                 name=name[0:32]
             else:
                 name+='\0'*(32-len(name))
-            self.lfFaceName=name.decode('utf-8').encode('utf-16')[2:]
+            self.lfFaceName=name.decode('utf-8').encode('utf-16le')
             # print "lfFaceName=%s" % self.lfFaceName
 
 
@@ -1470,7 +1468,7 @@ class _EMR:
             self.ptlReference_x=x
             self.ptlReference_y=y
             if isinstance(txt,unicode):
-                self.string=txt.encode('utf-16')[2:]
+                self.string=txt.encode('utf-16le')
             else:
                 self.string=txt
             self.charsize=1
@@ -1525,7 +1523,7 @@ class _EMR:
             txt=StringIO()
             txt.write("\tdx: %s\n" % str(self.dx))
             if self.charsize==2:
-                txt.write("\tunicode string: %s\n" % str(self.string.decode('utf-16')))
+                txt.write("\tunicode string: %s\n" % str(self.string.decode('utf-16le')))
             else:
                 txt.write("\tascii string: %s\n" % str(self.string))
                     
