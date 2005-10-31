@@ -21,9 +21,13 @@ import struct
 from cStringIO import StringIO
 import copy
 
-
+# setup.py requires that these be defined, and the OnceAndOnlyOnce
+# principle is used here.  This is the only place where these values
+# are defined in the source distribution, and everything else that
+# needs this should grab it from here.
 __version__ = "2.0.0b1"
-__author__ = "Rob McMullen <robm@users.sourceforge.net>"
+__author__ = "Rob McMullen"
+__author_email__ = "robm@users.sourceforge.net"
 __url__ = "http://pyemf.sourceforge.net"
 
 # Reference: libemf.h

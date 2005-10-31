@@ -10,10 +10,16 @@ if sys.version < '2.2.3':
     DistributionMetadata.classifiers = None
     DistributionMetadata.download_url = None
 
+# python looks in current directory first, so we'll be sure to get our
+# freshly unpacked version here.
 import pyemf
+
 pyemf_version=str(pyemf.__version__)
-pyemf_author,pyemf_email=re.match('^(.*?)\s*<(.*)>$', pyemf.__author__).groups()
+pyemf_author=pyemf.__author__
+pyemf_email=pyemf.__author_email__
 pyemf_url=pyemf.__url__
+
+print "Version = %s" % pyemf_version
 
 setup(name = "pyemf",
       version = pyemf_version,
