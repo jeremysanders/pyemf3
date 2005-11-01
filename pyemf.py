@@ -339,6 +339,22 @@ class _DC:
         #self.polyfill_mode = ALTERNATE;
         #self.map_mode = MM_TEXT;
 
+        # Viewport origin.  A pixel drawn at (x,y) after the viewport
+        # origin has been set to (xv,yv) will be displayed at
+        # (x+xv,y+yv).
+        self.viewport_x=0
+        self.viewport_y=0
+
+        # Window origin.  A pixel drawn at (x,y) after the window
+        # origin has been set to (xw,yw) will be displayed at
+        # (x-xw,y-yw).
+        self.window_x=0
+        self.window_y=0
+
+        # If both window and viewport origins are set, a pixel drawn
+        # at (x,y) will be displayed at (x-xw+xv,y-yw+yv)
+
+
     def getBounds(self,header):
         self.setPhysicalSize(header.rclFrame_left,header.rclFrame_top,
                              header.rclFrame_right,header.rclFrame_bottom)
@@ -926,8 +942,10 @@ class _EMR:
         emr_typedef=[('i','ptlOrigin_x'),
                      ('i','ptlOrigin_y')]
         
-        def __init__(self):
+        def __init__(self,x=0,y=0):
             _EMR_UNKNOWN.__init__(self)
+            self.ptlOrigin_x=x
+            self.ptlOrigin_y=y
 
 
     class _SETVIEWPORTEXTEX(_SETWINDOWEXTEX):
@@ -1066,8 +1084,12 @@ class _EMR:
                 ('i','yNum',1),
                 ('i','yDenom',1)]
         
-        def __init__(self):
+        def __init__(self,xn=1,xd=1,yn=1,yd=1):
             _EMR_UNKNOWN.__init__(self)
+            self.xNum=xn
+            self.xDenom=xd
+            self.yNum=yn
+            self.yDenom=yd
 
     class _SCALEWINDOWEXTEX(_SCALEVIEWPORTEXTEX):
         emr_id=32
@@ -2062,21 +2084,32 @@ Set the window mapping mode. (OpenOffice supports at least MM_ANISOTROPIC.)
             return 0
         return 1
         
-    def SetViewportOrgEx(self,x,y):
+    def SetViewportOrgEx(self,xv,yv):
         """
 
-Set the origin of the viewport.
-@param x: new x position of the viewport origin.
-@param y: new y position of the viewport origin.
+Set the origin of the viewport.  A pixel drawn at (x,y) after the
+viewport origin has been set to (xv,yv) will be displayed at
+(x+xv,y+yv).
+
+If, in addition, the window origin is set to (xw,yw) using
+L{SetWindowOrgEx}, a pixel drawn at (x,y) will be displayed at
+(x-xw+xv,y-yw+yv)
+        
+
+@param xv: new x position of the viewport origin.
+@param yv: new y position of the viewport origin.
 @return: previous viewport origin
 @rtype: 2-tuple (x,y) if successful, or None if unsuccessful
-@type x: int
-@type y: int
+@type xv: int
+@type yv: int
         """
-        e=_EMR._SETVIEWPORTORGEX(cx,cy)
+        e=_EMR._SETVIEWPORTORGEX(xv,yv)
         if not self._append(e):
-            return 0
-        return 1
+            return None
+        old=(self.dc.viewport_x,self.dc.viewport_y)
+        self.dc.viewport_x=xv
+        self.dc.viewport_y=yv
+        return old
 
     def GetViewportOrgEx(self):
         """
@@ -2085,20 +2118,33 @@ Get the origin of the viewport.
 @return: returns the current viewport origin.
 @rtype: 2-tuple (x,y)
         """
-        pass
-    def SetWindowOrgEx(self,x,y):
+        return (self.dc.viewport_x,self.dc.viewport_y)
+    
+    def SetWindowOrgEx(self,xw,yw):
         """
 
-Set the origin of the window. Evidently, this means that a point drawn
-at the given coordinates will appear at the Viewport origin.
-@param x: new x position of the window origin.
-@param y: new y position of the window origin.
+Set the origin of the window.  A pixel drawn at (x,y) after the window
+origin has been set to (xw,yw) will be displayed at (x-xw,y-yw).
+
+If, in addition, the viewport origin is set to (xv,yv) using
+L{SetViewportOrgEx}, a pixel drawn at (x,y) will be displayed at
+(x-xw+xv,y-yw+yv)
+
+@param xw: new x position of the window origin.
+@param yw: new y position of the window origin.
 @return: previous window origin
 @rtype: 2-tuple (x,y) if successful, or None if unsuccessful
-@type x: int
-@type y: int
+@type xw: int
+@type yw: int
         """
-        pass
+        e=_EMR._SETWINDOWORGEX(xw,yw)
+        if not self._append(e):
+            return None
+        old=(self.dc.window_x,self.dc.window_y)
+        self.dc.window_x=xw
+        self.dc.window_y=yw
+        return old
+
     def GetWindowOrgEx(self):
         """
 
@@ -2107,8 +2153,9 @@ Get the origin of the window.
 @rtype: 2-tuple (x,y)
 
         """
-        pass
-    def SetViewportExtEx(self,cx,cy):
+        return (self.dc.window_x,self.dc.window_y)
+
+    def SetViewportExtEx(self,x,y):
         """
 Set the dimensions of the viewport in device units.  Device units are
 based on the dimensions returned by the GetDeviceCaps calls.  So, each
@@ -2122,7 +2169,7 @@ millimeters.
 @type cx: int
 @type cy: int
         """
-        e=_EMR._SETVIEWPORTEXTEX(cx,cy)
+        e=_EMR._SETVIEWPORTEXTEX(x,y)
         if not self._append(e):
             return 0
         return 1
@@ -2142,7 +2189,8 @@ Scale the dimensions of the viewport.
 @type y_num: int
 @type y_den: int
         """
-        pass
+        return self._append(_EMR._SCALEVIEWPORTEXTEX(x_num,x_den,y_num,y_den))
+
     def GetViewportExtEx(self):
         """
 
@@ -2152,18 +2200,18 @@ Get the dimensions of the viewport.
 
         """
         pass
-    def SetWindowExtEx(self,cx,cy):
+    def SetWindowExtEx(self,x,y):
         """
 
 Set the dimensions of the window. (OpenOffice honors this at least when map mode is MM_ANISOTROPIC.)
-@param cx: new width of the window.
-@param cy: new height of the window.
+@param x: new width of the window.
+@param y: new height of the window.
 @return: returns the previous size of the window.
 @rtype: 2-tuple (width,height) if successful, or None if unsuccessful
-@type cx: int
-@type cy: int
+@type x: int
+@type y: int
         """
-        e=_EMR._SETWINDOWEXTEX(cx,cy)
+        e=_EMR._SETWINDOWEXTEX(x,y)
         if not self._append(e):
             return 0
         return 1
@@ -2183,7 +2231,8 @@ Scale the dimensions of the window.
 @type y_num: int
 @type y_den: int
         """
-        pass
+        return self._append(_EMR._SCALEWINDOWEXTEX(x_num,x_den,y_num,y_den))
+
     def GetWindowExtEx(self):
         """
 
