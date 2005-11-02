@@ -695,8 +695,10 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
                 typecode=item[0]
                 name=item[1]
                 val=self.str_decode(typecode,name)
-                print val
-                txt.write("\t%-20s: %s\n" % (name,val))
+                try:
+                    txt.write("\t%-20s: %s\n" % (name,val))
+                except UnicodeEncodeError:
+                    txt.write("\t%-20s: <<<BAD UNICODE STRING>>>\n" % name)
         txt.write(self.str_extra())
         return txt.getvalue()
 
