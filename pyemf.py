@@ -3,8 +3,8 @@
 """
 
 Pure Python bindings for an
-U{ECMA-234<http://www.ecma-international.org/publications/standards/Ecma-234.htm
->} compliant vector graphics library.  ECMA-234 is the published
+U{ECMA-234<http://www.ecma-international.org/publications/standards/Ecma-234.htm>}
+compliant vector graphics library.  ECMA-234 is the published
 interface for the Windows GDI used in the Microsoft windows
 environment and, more importantly, natively supported by the
 U{OpenOffice<http://www.openoffice.org>} suite of tools.
@@ -289,6 +289,15 @@ Pack integer color values into a 32-bit integer format.
     return ((b<<16)|(g<<8)|r)
 
 def _normalizeColor(c):
+    """
+Normalize the input into a packed integer.  If the input is a tuple,
+pass it through L{RGB} to generate the color value.
+
+@param c: color
+@type c: int or (r,g,b) tuple
+@return: packed integer color from L{RGB}
+@rtype: int
+"""
     if isinstance(c,int):
         return c
     if isinstance(c,tuple) or isinstance(c,list):
@@ -298,6 +307,13 @@ def _normalizeColor(c):
 
 
 class _DC:
+    """Device Context state machine.  This is used to simulate the
+    state of the GDI buffer so that some user commands can return
+    information.  In a real GDI implementation, there'd be lots of
+    error checking done, but here we can't do a whole bunch because
+    we're outputting to a metafile.  So, in general, we assume
+    success."""
+    
     def __init__(self,width='6.0',height='4.0',density='72',units='in'):
         self.x=0
         self.y=0
@@ -356,6 +372,8 @@ class _DC:
 
 
     def getBounds(self,header):
+        """Extract the dimensions from an _EMR._HEADER record."""
+        
         self.setPhysicalSize(header.rclFrame_left,header.rclFrame_top,
                              header.rclFrame_right,header.rclFrame_bottom)
         if header.szlMicrometers_cx>0:
@@ -371,6 +389,7 @@ class _DC:
         self.ref_devheight=header.szlDevice_cy
 
     def setPhysicalSize(self,left,top,right,bottom):
+        """Set the (meterstick) dimensions."""
         self.width=right-left
         self.height=bottom-top
         self.frame_left=left
@@ -379,6 +398,7 @@ class _DC:
         self.frame_bottom=bottom
 
     def setDeviceSize(self,left,top,right,bottom):
+        """Set the pixel-addressable dimensions."""
         self.devwidth=right-left
         self.devheight=bottom-top
         self.bounds_left=left
@@ -388,6 +408,8 @@ class _DC:
                 
 
     def addObject(self,emr,handle=-1):
+        """Add an object to the handle list, so it can be retrieved
+        later or deleted."""
         count=len(self.objects)
         if handle>0:
             # print "Adding handle %s (%s)" % (handle,emr.__class__.__name__.lstrip('_'))
@@ -403,6 +425,8 @@ class _DC:
         return handle
 
     def removeObject(self,handle):
+        """Remove an object by its handle.  Handles can be reused, and
+        are reused from lowest available handle number."""
         if handle<1 or handle>=len(self.objects):
             raise IndexError("Invalid handle")
         # print "removing handle %d (%s)" % (handle,self.objects[handle].__class__.__name__.lstrip('_'))
