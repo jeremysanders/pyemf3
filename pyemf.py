@@ -16,6 +16,9 @@ U{OpenOffice<http://www.openoffice.org>} suite of tools.
 
 """
 
+__extra_epydoc_fields__ = [('gdi', 'GDI Command', 'GDI Commands')]
+
+
 import os,sys,re
 import struct
 from cStringIO import StringIO
@@ -249,6 +252,17 @@ GM_LAST           = 2
 # Arc direction modes
 AD_COUNTERCLOCKWISE = 1
 AD_CLOCKWISE        = 2
+
+# Clipping paths
+RGN_ERROR         = 0
+RGN_AND           = 1
+RGN_OR            = 2
+RGN_XOR           = 3
+RGN_DIFF          = 4
+RGN_COPY          = 5
+RGN_MIN           = RGN_AND
+RGN_MAX           = RGN_COPY
+
 
 
 def _round4(num):
@@ -996,6 +1010,10 @@ class _EMR:
 
 
     class _EOF(_EMR_UNKNOWN):
+        """End of file marker.  Usually 20 bytes long, but I have a
+        Windows generated .emf file that only has a 12 byte long EOF
+        record.  I don't know if that's a broken example or what, but
+        both Windows progs and OpenOffice seem to handle it."""
         emr_id=14
         emr_typedef=[
                 ('i','nPalEntries',0),
@@ -1004,9 +1022,6 @@ class _EMR:
         
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
-            # I don't know if I have a broken example or what, but
-            # features.emf file only has a 12 byte long EOF record.
-            # OpenOffice seems to handle it, though.
 
 
     class _SETPIXELV(_EMR_UNKNOWN):
@@ -1035,9 +1050,9 @@ class _EMR:
         emr_id=17
         emr_typedef=[('i','iMode',MM_ANISOTROPIC)]
         
-        def __init__(self,mode=MM_ANISOTROPIC,last=MM_MAX):
+        def __init__(self,mode=MM_ANISOTROPIC,first=0,last=MM_MAX):
             _EMR_UNKNOWN.__init__(self)
-            if mode<0 or mode>last:
+            if mode<first or mode>last:
                 self.error=1
             else:
                 self.iMode=mode
@@ -1169,10 +1184,12 @@ class _EMR:
 
 
     class _SELECTOBJECT(_EMR_UNKNOWN):
+        """Select a brush, pen, font (or bitmap or region but there is
+        no current user interface for those) object to be current and
+        replace the previous item of that class.  Note that stock
+        objects have their high order bit set, so the handle must be
+        an unsigned int."""
         emr_id=37
-
-        # handle must be unsigned to handle stock objects, which have
-        # their high order bit set.
         emr_typedef=[('I','handle')]
         
         def __init__(self,dc=None,handle=0):
@@ -1417,10 +1434,21 @@ class _EMR:
         pass
 
 
-#define EMR_SELECTCLIPPATH	67
+    class _SELECTCLIPPATH(_SETMAPMODE):
+        """Select the current path and make it the clipping region.
+        Must be a closed path.
+
+        @gdi: SelectClipPath
+        """
+        emr_id=67
+        def __init__(self,mode=RGN_COPY):
+            _EMR._SETMAPMODE.__init__(self,mode,first=RGN_MIN,last=RGN_MAX)
 
 
     class _ABORTPATH(_EMR_UNKNOWN):
+        """Discards any current path, whether open or closed.
+
+        @gdi: AbortPath"""
         emr_id=68
         pass
 
@@ -1436,8 +1464,38 @@ class _EMR:
 #define EMR_MASKBLT	78
 #define EMR_PLGBLT	79
 #define EMR_SETDIBITSTODEVICE	80
-#define EMR_STRETCHDIBITS	81
 
+    class _STRETCHDIBITS(_EMR_UNKNOWN):
+        """Copies the image from the source image to the destination
+        image.  DIB is currently an opaque format to me, but
+        apparently it has been extented recently to allow JPG and PNG
+        images...
+
+        @gdi: StretchDIBits
+        """
+        emr_id=81
+        emr_typedef=[
+                ('i','rclBounds_left'),
+                ('i','rclBounds_top'),
+                ('i','rclBounds_right'),
+                ('i','rclBounds_bottom'),
+                ('i','xDest'), 
+                ('i','yDest'), 
+                ('i','xSrc'), 
+                ('i','ySrc'), 
+                ('i','cxSrc'), 
+                ('i','cySrc'),
+                ('i','offBmiSrc'),
+                ('i','cbBmiSrc'), 
+                ('i','offBitsSrc'), 
+                ('i','cbBitsSrc'), 
+                ('i','iUsageSrc'), 
+                ('i','dwRop'), 
+                ('i','cxDest'), 
+                ('i','cyDest')]
+        
+        def __init__(self):
+            _EMR_UNKNOWN.__init__(self)
 
 
     class _EXTCREATEFONTINDIRECTW(_EMR_UNKNOWN):
