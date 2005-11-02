@@ -536,6 +536,11 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
         except IndexError:
             raise IndexError("name=%s index=%d values=%s" % (name,index,str(v)))
 
+    def hasHandle(self):
+        """Return true if this object has a handle that needs to be
+        saved in the object array for later recall by SelectObject."""
+        return False
+
     def setBounds(self,bounds):
         """Set bounds of object.  Depends on naming convention always
         defining the bounding rectangle as
@@ -690,6 +695,7 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
                 typecode=item[0]
                 name=item[1]
                 val=self.str_decode(typecode,name)
+                print val
                 txt.write("\t%-20s: %s\n" % (name,val))
         txt.write(self.str_extra())
         return txt.getvalue()
@@ -1165,6 +1171,9 @@ class _EMR:
             self.lopn_width=width
             self.lopn_color=color
 
+        def hasHandle(self):
+            return True
+
 
     class _CREATEBRUSHINDIRECT(_EMR_UNKNOWN):
         emr_id=39
@@ -1179,6 +1188,9 @@ class _EMR:
             self.lbStyle = style
             self.lbColor = color
             self.lbHatch = hatch
+
+        def hasHandle(self):
+            return True
 
 
     class _DELETEOBJECT(_SELECTOBJECT):
@@ -1275,15 +1287,26 @@ class _EMR:
         pass
 
 
-    class _SELECTPALLETE(_EMR_UNKNOWN):
+    class _SELECTPALETTE(_EMR_UNKNOWN):
         emr_id=48
-        emr_typedef=[('i','ihPal')]
+        emr_typedef=[('i','handle')]
         
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
         
 
-#define EMR_CREATEPALETTE	49
+    # Stub class for palette
+    class _CREATEPALETTE(_EMR_UNKNOWN):
+        emr_id=49
+        emr_typedef=[('i','handle',0)]
+        
+        def __init__(self):
+            _EMR_UNKNOWN.__init__(self)
+            
+        def hasHandle(self):
+            return True
+        
+            
 #define EMR_SETPALETTEENTRIES	50
 #define EMR_RESIZEPALETTE	51
 #define EMR_REALIZEPALETTE	52
@@ -1463,6 +1486,8 @@ class _EMR:
             self.lfFaceName=name.decode('utf-8').encode('utf-16le')
             # print "lfFaceName=%s" % self.lfFaceName
 
+        def hasHandle(self):
+            return True
 
 
     class _EXTTEXTOUTA(_EMR_UNKNOWN):
@@ -1593,9 +1618,23 @@ class _EMR:
         pass
 
 #define EMR_POLYDRAW16	92
-#define EMR_CREATEMONOBRUSH	93
-#define EMR_CREATEDIBPATTERNBRUSHPT	94
-#define EMR_EXTCREATEPEN	95
+
+    # Stub class for storage of brush with monochrome bitmap or DIB
+    class _CREATEMONOBRUSH(_CREATEPALETTE):
+        emr_id=93
+        pass
+
+    # Stub class for device independent bitmap brush
+    class _CREATEDIBPATTERNBRUSHPT(_CREATEPALETTE):
+        emr_id=94
+        pass
+
+    # Stub class for extended pen
+    class _EXTCREATEPEN(_CREATEPALETTE):
+        emr_id=95
+        pass
+
+
 #define EMR_POLYTEXTOUTA	96
 #define EMR_POLYTEXTOUTW	97
 #define EMR_SETICMMODE	98
@@ -1724,9 +1763,9 @@ object, they will be overwritten by the records from this file.
                     e.unserialize(fh,iType,nSize)
                     self.records.append(e)
                     
-                    if iType==38 or iType==39 or iType==82:
+                    if e.hasHandle():
                         self.dc.addObject(e,e.handle)
-                    elif iType==40:
+                    elif isinstance(e,_EMR._DELETEOBJECT):
                         self.dc.removeObject(e.handle)
                         
                     if self.verbose:
