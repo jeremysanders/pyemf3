@@ -263,6 +263,12 @@ RGN_COPY          = 5
 RGN_MIN           = RGN_AND
 RGN_MAX           = RGN_COPY
 
+# Color management
+ICM_OFF   = 1
+ICM_ON    = 2
+ICM_QUERY = 3
+ICM_MIN   = 1
+ICM_MAX   = 3
 
 
 def _round4(num):
@@ -320,13 +326,24 @@ pass it through L{RGB} to generate the color value.
 
 
 
+# FIXME: do I need DPtoLP and LPtoDP?
+
 class _DC:
     """Device Context state machine.  This is used to simulate the
     state of the GDI buffer so that some user commands can return
     information.  In a real GDI implementation, there'd be lots of
     error checking done, but here we can't do a whole bunch because
     we're outputting to a metafile.  So, in general, we assume
-    success."""
+    success.
+
+    Here's Microsoft's explanation of units: http://msdn.microsoft.com/library/default.asp?url=/library/en-us/gdi/cordspac_3qsz.asp
+
+    Window <=> Logical units <=> page space or user addressable units.
+
+    Viewport <=> Physical units <=> device units and are measured in actual
+    dimensions, like .01 mm units.
+
+    """
     
     def __init__(self,width='6.0',height='4.0',density='72',units='in'):
         self.x=0
@@ -341,9 +358,9 @@ class _DC:
         # list resulting from deletes
         self.objectholes=[]
 
-        # Reference device size in pixels
-        self.ref_devwidth=1024
-        self.ref_devheight=768
+        # Reference device size in logical units (pixels)
+        self.ref_pixelwidth=1024
+        self.ref_pixelheight=768
 
         # Reference device size in mm
         self.ref_width=320 
@@ -358,9 +375,9 @@ class _DC:
             self.setPhysicalSize(0,0,int(width*2540),int(height*2540))
 
         # addressable pixel sizes
-        self.devwidth=0
-        self.devheight=0
-        self.setDeviceSize(0,0,int(width*density),int(height*density))
+        self.pixelwidth=0
+        self.pixelheight=0
+        self.setPixelSize(0,0,int(width*density),int(height*density))
             
         #self.text_alignment = TA_BASELINE;
         self.text_color = RGB(0,0,0);
@@ -375,14 +392,24 @@ class _DC:
         self.viewport_x=0
         self.viewport_y=0
 
+        # Viewport extents.  Should density be replaced by
+        # self.ref_pixelwidth/self.ref_width?
+        self.viewport_ext_x=self.width/100*density
+        self.viewport_ext_y=self.height/100*density
+
         # Window origin.  A pixel drawn at (x,y) after the window
         # origin has been set to (xw,yw) will be displayed at
         # (x-xw,y-yw).
+        
+        # If both window and viewport origins are set, a pixel drawn
+        # at (x,y) will be displayed at (x-xw+xv,y-yw+yv)
         self.window_x=0
         self.window_y=0
 
-        # If both window and viewport origins are set, a pixel drawn
-        # at (x,y) will be displayed at (x-xw+xv,y-yw+yv)
+        # Window extents
+        self.window_ext_x=self.pixelwidth
+        self.window_ext_y=self.pixelheight
+
 
 
     def getBounds(self,header):
@@ -397,13 +424,14 @@ class _DC:
             self.ref_width=header.szlMillimeters_cx*100
             self.ref_height=header.szlMillimeters_cy*100
 
-        self.setDeviceSize(header.rclBounds_left,header.rclBounds_top,
+        self.setPixelSize(header.rclBounds_left,header.rclBounds_top,
                            header.rclBounds_right,header.rclBounds_bottom)
-        self.ref_devwidth=header.szlDevice_cx
-        self.ref_devheight=header.szlDevice_cy
+        self.ref_pixelwidth=header.szlDevice_cx
+        self.ref_pixelheight=header.szlDevice_cy
 
     def setPhysicalSize(self,left,top,right,bottom):
-        """Set the (meterstick) dimensions."""
+        """Set the physical (i.e. stuff you could measure with a
+        meterstick) dimensions."""
         self.width=right-left
         self.height=bottom-top
         self.frame_left=left
@@ -411,10 +439,10 @@ class _DC:
         self.frame_right=right
         self.frame_bottom=bottom
 
-    def setDeviceSize(self,left,top,right,bottom):
+    def setPixelSize(self,left,top,right,bottom):
         """Set the pixel-addressable dimensions."""
-        self.devwidth=right-left
-        self.devheight=bottom-top
+        self.pixelwidth=right-left
+        self.pixelheight=bottom-top
         self.bounds_left=left
         self.bounds_top=top
         self.bounds_right=right
@@ -833,13 +861,13 @@ class _EMR:
             self.rclFrame_bottom=dc.frame_bottom
 
             if scaleheader:
-                self.szlDevice_cx=dc.devwidth
-                self.szlDevice_cy=dc.devheight
+                self.szlDevice_cx=dc.pixelwidth
+                self.szlDevice_cy=dc.pixelheight
                 self.szlMicrometers_cx=dc.width*10
                 self.szlMicrometers_cy=dc.height*10
             else:
-                self.szlDevice_cx=dc.ref_devwidth
-                self.szlDevice_cy=dc.ref_devheight
+                self.szlDevice_cx=dc.ref_pixelwidth
+                self.szlDevice_cy=dc.ref_pixelheight
                 self.szlMicrometers_cx=dc.ref_width*10
                 self.szlMicrometers_cy=dc.ref_height*10
                 
@@ -1721,13 +1749,42 @@ class _EMR:
 
 #define EMR_POLYTEXTOUTA	96
 #define EMR_POLYTEXTOUTW	97
-#define EMR_SETICMMODE	98
+
+
+    class _SETICMMODE(_SETMAPMODE):
+        """Set or query the current color management mode.
+
+        @gdi: SetICMMode
+        """
+        emr_id=98
+        def __init__(self,mode=ICM_OFF):
+            _EMR._SETMAPMODE.__init__(self,mode,first=ICM_MIN,last=ICM_MAX)
+
+
 #define EMR_CREATECOLORSPACE	99
 #define EMR_SETCOLORSPACE	100
 #define EMR_DELETECOLORSPACE	101
 #define EMR_GLSRECORD	102
 #define EMR_GLSBOUNDEDRECORD	103
 #define EMR_PIXELFORMAT 104
+#define EMR_DRAWESCAPE    105
+#define EMR_EXTESCAPE     106
+#define EMR_STARTDOC      107
+#define EMR_SMALLTEXTOUT  108
+#define EMR_FORCEUFIMAPPING       109
+#define EMR_NAMEDESCAPE   110
+#define EMR_COLORCORRECTPALETTE   111
+#define EMR_SETICMPROFILEA        112
+#define EMR_SETICMPROFILEW        113
+#define EMR_ALPHABLEND    114
+#define EMR_SETLAYOUT     115
+#define EMR_TRANSPARENTBLT        116
+#define EMR_RESERVED_117  117
+#define EMR_GRADIENTFILL  118
+#define EMR_SETLINKEDUFI  119
+#define EMR_SETTEXTJUSTIFICATION  120
+#define EMR_COLORMATCHTOTARGETW   121
+#define EMR_CREATECOLORSPACEW     122
 
 
 # Set up the mapping of ids to classes for all of the record types in
@@ -1801,10 +1858,10 @@ integer coordinates.
         self._append(emr)
         if not self.scaleheader:
             self.SetMapMode(MM_ANISOTROPIC)
-            self.SetWindowExtEx(self.dc.devwidth,self.dc.devheight)
+            self.SetWindowExtEx(self.dc.pixelwidth,self.dc.pixelheight)
             self.SetViewportExtEx(
-                int(self.dc.width/100.0*self.dc.ref_devwidth/self.dc.ref_width),
-                int(self.dc.height/100.0*self.dc.ref_devheight/self.dc.ref_height))
+                int(self.dc.width/100.0*self.dc.ref_pixelwidth/self.dc.ref_width),
+                int(self.dc.height/100.0*self.dc.ref_pixelheight/self.dc.ref_height))
 
 
     def load(self,filename=None):
@@ -2134,8 +2191,8 @@ B{Note:} Currently appears unsupported in OpenOffice.
     def SetBkColor(self,color):
         """
 
-Set the background color. (self,As near as I can tell, StarOffice only uses
-this for text background.)
+Set the background color.
+
 @param color: background L{color<RGB>}.
 @return: previous background L{color<RGB>}.
 @rtype: int
@@ -2150,7 +2207,8 @@ this for text background.)
     def SetBkMode(self,mode):
         """
 
-Set the background mode. (StarOffice 1.1 seems to ignore this value, but Windows uses it.)
+Set the background mode.
+
 The choices for mode are:
  - TRANSPARENT
  - OPAQUE
@@ -2188,15 +2246,17 @@ other edges.
     def SetMapMode(self,mode):
         """
 
-Set the window mapping mode. (OpenOffice supports at least MM_ANISOTROPIC.)
- - MM_TEXT
- - MM_LOMETRIC
- - MM_HIMETRIC
- - MM_LOENGLISH
- - MM_HIENGLISH
- - MM_TWIPS
- - MM_ISOTROPIC
- - MM_ANISOTROPIC
+Set the window mapping mode.  This is the mapping between pixels in page space to pixels in device space.  Page space is the coordinate system that is used for all the drawing commands -- it is how pixels are identified and figures are placed in the metafile.  They are integer units.
+
+Device space is the coordinate system of the final output, measured in physical dimensions such as mm, inches, or twips.  It is this coordinate system that provides the scaling that makes metafiles into a scalable graphics format.
+ - MM_TEXT: each unit in page space is mapped to one pixel
+ - MM_LOMETRIC: 1 page unit = .1 mm in device space
+ - MM_HIMETRIC: 1 page unit = .01 mm in device space
+ - MM_LOENGLISH: 1 page unit = .01 inch in device space
+ - MM_HIENGLISH: 1 page unit = .001 inch in device space
+ - MM_TWIPS: 1 page unit = 1/20 point (or 1/1440 inch)
+ - MM_ISOTROPIC: 1 page unit = user defined ratio, but axes equally scaled
+ - MM_ANISOTROPIC: 1 page unit = user defined ratio, axes may be independently scaled
 @param mode: window mapping mode.
 @return: previous window mapping mode, or zero if error.
 @rtype: int
@@ -2210,13 +2270,15 @@ Set the window mapping mode. (OpenOffice supports at least MM_ANISOTROPIC.)
     def SetViewportOrgEx(self,xv,yv):
         """
 
-Set the origin of the viewport.  A pixel drawn at (x,y) after the
-viewport origin has been set to (xv,yv) will be displayed at
-(x+xv,y+yv).
+Set the origin of the viewport, which translates the origin of the
+coordinate system by (xv,yv).  A pixel drawn at (x,y) in the new
+coordinate system will be displayed at (x+xv,y+yv) in terms of the
+previous coordinate system.
 
-If, in addition, the window origin is set to (xw,yw) using
-L{SetWindowOrgEx}, a pixel drawn at (x,y) will be displayed at
-(x-xw+xv,y-yw+yv)
+Contrast this with L{SetWindowOrgEx}, which seems to be the opposite
+translation.  So, if in addition, the window origin is set to (xw,yw)
+using L{SetWindowOrgEx}, a pixel drawn at (x,y) will be displayed at
+(x-xw+xv,y-yw+yv) in terms of the original coordinate system.
         
 
 @param xv: new x position of the viewport origin.
@@ -2246,12 +2308,16 @@ Get the origin of the viewport.
     def SetWindowOrgEx(self,xw,yw):
         """
 
-Set the origin of the window.  A pixel drawn at (x,y) after the window
-origin has been set to (xw,yw) will be displayed at (x-xw,y-yw).
+Set the origin of the window, which translates the origin of the
+coordinate system by (-xw,-yw).  A pixel drawn at (x,y) in the new
+coordinate system will be displayed at (x-xw,y-yw) in terms of the
+previous coordinate system.
 
-If, in addition, the viewport origin is set to (xv,yv) using
-L{SetViewportOrgEx}, a pixel drawn at (x,y) will be displayed at
-(x-xw+xv,y-yw+yv)
+Contrast this with L{SetViewportOrgEx}, which seems to be the opposite
+translation.  So, if in addition, the viewport origin is set to
+(xv,yv) using L{SetViewportOrgEx}, a pixel drawn at (x,y) will be
+displayed at (x-xw+xv,y-yw+yv) in terms of the original coordinate
+system.
 
 @param xw: new x position of the window origin.
 @param yw: new y position of the window origin.
@@ -2281,9 +2347,12 @@ Get the origin of the window.
     def SetViewportExtEx(self,x,y):
         """
 Set the dimensions of the viewport in device units.  Device units are
-based on the dimensions returned by the GetDeviceCaps calls.  So, each
-pixel of a device unit is sized xmm/xpixels by ymm/ypixels in
-millimeters.
+physical dimensions, in millimeters.  The total extent is equal to the
+width is millimeters multiplied by the density of pixels per
+millimeter in that dimension.
+
+Note: this is only usable when L{SetMapMode} has been set to
+MM_ISOTROPIC or MM_ANISOTROPIC.
 
 @param cx: new width of the viewport.
 @param cy: new height of the viewport.
@@ -2294,8 +2363,11 @@ millimeters.
         """
         e=_EMR._SETVIEWPORTEXTEX(x,y)
         if not self._append(e):
-            return 0
-        return 1
+            return None
+        old=(self.dc.viewport_ext_x,self.dc.viewport_ext_y)
+        self.dc.viewport_ext_x=xv
+        self.dc.viewport_ext_y=yv
+        return old
 
     def ScaleViewportExtEx(self,x_num,x_den,y_num,y_den):
         """
@@ -2312,21 +2384,34 @@ Scale the dimensions of the viewport.
 @type y_num: int
 @type y_den: int
         """
-        return self._append(_EMR._SCALEVIEWPORTEXTEX(x_num,x_den,y_num,y_den))
+        e=_EMR._EMR._SCALEVIEWPORTEXTEX(x_num,x_den,y_num,y_den)
+        if not self._append(e):
+            return None
+        old=(self.dc.viewport_ext_x,self.dc.viewport_ext_y)
+        self.dc.viewport_ext_x=old[0]*x_num/x_den
+        self.dc.viewport_ext_y=old[1]*y_num/y_den
+        return old
 
     def GetViewportExtEx(self):
         """
 
-Get the dimensions of the viewport.
+Get the dimensions of the viewport in device units (i.e. physical dimensions).
 @return: returns the size of the viewport.
 @rtype: 2-tuple (width,height)
 
         """
-        pass
+        old=(self.dc.viewport_ext_x,self.dc.viewport_ext_y)
+        return old
+
     def SetWindowExtEx(self,x,y):
         """
 
-Set the dimensions of the window. (OpenOffice honors this at least when map mode is MM_ANISOTROPIC.)
+Set the dimensions of the window.  Window size is measured in integer
+numbers of pixels (logical units).
+
+Note: this is only usable when L{SetMapMode} has been set to
+MM_ISOTROPIC or MM_ANISOTROPIC.
+
 @param x: new width of the window.
 @param y: new height of the window.
 @return: returns the previous size of the window.
@@ -2336,8 +2421,11 @@ Set the dimensions of the window. (OpenOffice honors this at least when map mode
         """
         e=_EMR._SETWINDOWEXTEX(x,y)
         if not self._append(e):
-            return 0
-        return 1
+            return None
+        old=(self.dc.window_ext_x,self.dc.window_ext_y)
+        self.dc.window_ext_x=x
+        self.dc.window_ext_y=y
+        return old
 
     def ScaleWindowExtEx(self,x_num,x_den,y_num,y_den):
         """
@@ -2354,16 +2442,24 @@ Scale the dimensions of the window.
 @type y_num: int
 @type y_den: int
         """
-        return self._append(_EMR._SCALEWINDOWEXTEX(x_num,x_den,y_num,y_den))
+        e=_EMR._SCALEWINDOWEXTEX(x_num,x_den,y_num,y_den)
+        if not self._append(e):
+            return None
+        old=(self.dc.window_ext_x,self.dc.window_ext_y)
+        self.dc.window_ext_x=old[0]*x_num/x_den
+        self.dc.window_ext_y=old[1]*y_num/y_den
+        return old
 
     def GetWindowExtEx(self):
         """
 
-Get the dimensions of the window.
+Get the dimensions of the window in logical units (integer numbers of pixels).
 @return: returns the size of the window.
 @rtype: 2-tuple (width,height)
         """
-        pass
+        old=(self.dc.window_ext_x,self.dc.window_ext_y)
+        return old
+
     def SetPixel(self,x,y,color):
         """
 
