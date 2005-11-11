@@ -36,8 +36,6 @@ __url__ = "http://pyemf.sourceforge.net"
 # Reference: libemf.h
 # and also wine: http://cvs.winehq.org/cvsweb/wine/include/wingdi.h
 
-emrmap={}
-
 # Brush styles
 BS_SOLID	    = 0
 BS_NULL		    = 1
@@ -270,6 +268,11 @@ ICM_QUERY = 3
 ICM_MIN   = 1
 ICM_MAX   = 3
 
+# World coordinate system transformation
+MWT_IDENTITY      = 1
+MWT_LEFTMULTIPLY  = 2
+MWT_RIGHTMULTIPLY = 3
+
 
 def _round4(num):
     """Round to the nearest multiple of 4 greater than or equal to the
@@ -338,10 +341,17 @@ class _DC:
 
     Here's Microsoft's explanation of units: http://msdn.microsoft.com/library/default.asp?url=/library/en-us/gdi/cordspac_3qsz.asp
 
-    Window <=> Logical units <=> page space or user addressable units.
+    Window <=> Logical units <=> page space or user addressable
+    integer pixel units.
 
     Viewport <=> Physical units <=> device units and are measured in actual
     dimensions, like .01 mm units.
+
+    There are four coordinate spaces used by GDI: world, page, device,
+    and physical device.  World and page are the same, unless a world
+    transform is used.  These are addressed by integer pixels.  Device
+    coordinates are referenced by physical dimensions corresponding to
+    the mapping mode currently used.
 
     """
     
@@ -1193,8 +1203,14 @@ class _EMR:
                 ('f','eDx'),
                 ('f','eDy')]
         
-        def __init__(self):
+        def __init__(self,em11=1.0,em12=0.0,em21=0.0,em22=1.0,edx=0.0,edy=0.0):
             _EMR_UNKNOWN.__init__(self)
+            self.eM11=em11
+            self.eM12=em12
+            self.eM21=em21
+            self.eM22=em22
+            self.eDx=edx
+            self.eDy=edy
 
     class _MODIFYWORLDTRANSFORM(_EMR_UNKNOWN):
         emr_id=36
@@ -1207,8 +1223,15 @@ class _EMR:
                 ('f','eDy'),
                 ('i','iMode')]
         
-        def __init__(self):
+        def __init__(self,em11=1.0,em12=0.0,em21=0.0,em22=1.0,edx=0.0,edy=0.0,mode=MWT_IDENTITY):
             _EMR_UNKNOWN.__init__(self)
+            self.eM11=em11
+            self.eM12=em12
+            self.eM21=em21
+            self.eM22=em22
+            self.eDx=edx
+            self.eDy=edy
+            self.iMode=mode
 
 
     class _SELECTOBJECT(_EMR_UNKNOWN):
@@ -1789,12 +1812,14 @@ class _EMR:
 
 # Set up the mapping of ids to classes for all of the record types in
 # the EMR class.
+_emrmap={}
+
 for name in dir(_EMR):
     #print name
     cls=getattr(_EMR,name,None)
     if cls and callable(cls) and issubclass(cls,_EMR_UNKNOWN):
         #print "subclass! id=%d %s" % (cls.emr_id,str(cls))
-        emrmap[cls.emr_id]=cls
+        _emrmap[cls.emr_id]=cls
 
 
 
@@ -1809,8 +1834,8 @@ User interface to EMF creation.
 @group Path Primatives: BeginPath, EndPath, MoveTo, LineTo, PolylineTo, ArcTo,
  PolyBezierTo, CloseFigure, FillPath, StrokePath, StrokeAndFillPath
 @group Text: CreateFont, SetTextAlign, SetTextColor, TextOut
-@group Viewport Manipulation: SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx, GetWindowOrgEx, SetViewportExtEx, ScaleViewportExtEx, GetViewportExtEx, SetWindowExtEx, ScaleWindowExtEx, GetWindowExtEx 
-@group Misc: GetLastError, GetDeviceCaps, SetMapMode
+@group Coordinate System Transformation: SetWorldTransform, ModifyWorldTransform
+@group Viewport Manipulation - Experimental: SetMapMode, SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx, GetWindowOrgEx, SetViewportExtEx, ScaleViewportExtEx, GetViewportExtEx, SetWindowExtEx, ScaleWindowExtEx, GetWindowExtEx 
 
 """
 
@@ -1896,8 +1921,8 @@ object, they will be overwritten by the records from this file.
                     (iType,nSize)=struct.unpack("<ii",data)
                     if self.verbose: print "EMF:  iType=%d nSize=%d" % (iType,nSize)
 
-                    if iType in emrmap:
-                        e=emrmap[iType]()
+                    if iType in _emrmap:
+                        e=_emrmap[iType]()
                     else:
                         e=_EMR_UNKNOWN()
 
@@ -2354,12 +2379,12 @@ millimeter in that dimension.
 Note: this is only usable when L{SetMapMode} has been set to
 MM_ISOTROPIC or MM_ANISOTROPIC.
 
-@param cx: new width of the viewport.
-@param cy: new height of the viewport.
+@param x: new width of the viewport.
+@param y: new height of the viewport.
 @return: returns the previous size of the viewport.
 @rtype: 2-tuple (width,height) if successful, or None if unsuccessful
-@type cx: int
-@type cy: int
+@type x: int
+@type y: int
         """
         e=_EMR._SETVIEWPORTEXTEX(x,y)
         if not self._append(e):
@@ -2460,6 +2485,88 @@ Get the dimensions of the window in logical units (integer numbers of pixels).
         old=(self.dc.window_ext_x,self.dc.window_ext_y)
         return old
 
+
+    def SetWorldTransform(self,m11,m12,m21,m22,dx,dy):
+        """
+Set the world coordinate to logical coordinate linear transform for
+subsequent operations.  With this matrix operation, you can translate,
+rotate, scale, shear, or a combination of all four.  The matrix
+operation is defined as follows where (x,y) are the original
+coordinates and (x',y') are the transformed coordinates::
+
+ | x |   | m11 m12 0 |   | x' |
+ | y | * | m21 m22 0 | = | y' |
+ | 0 |   | dx  dy  1 |   | 0  |
+ 
+or, the same thing defined as a system of linear equations::
+
+ x' = x*m11 + y*m21 + dx
+ y' = x*m12 + y*m22 + dy
+
+http://msdn.microsoft.com/library/en-us/gdi/cordspac_0inn.asp
+says that the offsets are in device coordinates, not pixel
+coordinates.
+
+B{Note:} Currently partially supported in OpenOffice.
+
+@param m11: matrix entry
+@type m11: float
+@param m12: matrix entry
+@type m12: float
+@param m21: matrix entry
+@type m21: float
+@param m22: matrix entry
+@type m22: float
+@param dx: x shift
+@type dx: float
+@param dy: y shift
+@type dy: float
+@return: status
+@rtype: boolean
+
+        """
+        return self._append(_EMR._SETWORLDTRANSFORM(m11,m12,m21,m22,dx,dy))
+        
+    def ModifyWorldTransform(self,mode,m11=1.0,m12=0.0,m21=0.0,m22=1.0,dx=0.0,dy=0.0):
+        """
+Change the current linear transform.  See L{SetWorldTransform} for a
+description of the matrix parameters.  The new transform may be
+modified in one of three ways, set by the mode parameter:
+
+ - MWT_IDENTITY: reset the transform to the identity matrix (the matrix parameters are ignored).
+ - MWT_LEFTMULTIPLY: multiply the matrix represented by these parameters by the current world transform to get the new transform.
+ - MWT_RIGHTMULTIPLY: multiply the current world tranform by the matrix represented here to get the new transform.
+ 
+The reason that there are two different multiplication types is that
+matrix multiplication is not commutative, which means the order of
+multiplication makes a difference.
+
+B{Note:} The parameter order was changed from GDI standard so that I
+could make the matrix parameters optional in the case of MWT_IDENTITY.
+
+B{Note:} Currently appears unsupported in OpenOffice.
+
+@param mode: MWT_IDENTITY, MWT_LEFTMULTIPLY, or MWT_RIGHTMULTIPLY
+@type mode: int
+@param m11: matrix entry
+@type m11: float
+@param m12: matrix entry
+@type m12: float
+@param m21: matrix entry
+@type m21: float
+@param m22: matrix entry
+@type m22: float
+@param dx: x shift
+@type dx: float
+@param dy: y shift
+@type dy: float
+@return: status
+@rtype: boolean
+
+        """
+        return self._append(_EMR._MODIFYWORLDTRANSFORM(m11,m12,m21,m22,dx,dy,mode))
+        
+
     def SetPixel(self,x,y,color):
         """
 
@@ -2469,7 +2576,7 @@ Set the pixel to the given color.
 @param color: the L{color<RGB>} to set the pixel.
 @type x: int
 @type y: int
-@type color: int
+@type color: int or (r,g,b) tuple
 
         """
         return self._append(_EMR._SETPIXELV(x,y,_normalizeColor(color)))
