@@ -6,6 +6,23 @@ CSS = layout.css colors.css
 IMAGES = ooimpress.png ooimpress-matplotlib.png
 
 
+# Distribution stuff
+TAR = gtar
+GZIP_ENV = --best
+
+PACKAGE := pyemf
+VERSION := $(shell grep __version__ pyemf.py|head -n1|cut -d \" -f 2)
+
+srcdir = .
+top_srcdir = .
+top_builddir = .
+
+distdir := $(PACKAGE)-$(VERSION)
+top_distdir := $(distdir)
+
+DISTFILES = pyemf.py setup.py README LICENSE test?.py
+
+
 .SUFFIXES:      .html.in .pre.in .html
 
 .html.in.html: template.html.in mainmenu.html.in
@@ -43,6 +60,30 @@ html: api/index.html $(HTML) $(PRE)
 
 install_html: html
 	rsync -avuz $(CSS) $(HTML) $(PRE) $(IMAGES) api robm@pyemf.sourceforge.net:/home/groups/p/py/pyemf/htdocs
+
+
+
+
+dist: distdir
+	-chmod -R a+r $(distdir)
+	GZIP=$(GZIP_ENV) $(TAR) chozf $(distdir).tar.gz $(distdir)
+	-rm -rf $(distdir)
+
+distdir: $(DISTFILES)
+	-rm -rf $(distdir)
+	mkdir $(distdir)
+	-chmod 777 $(distdir)
+	distdir=`cd $(distdir) && pwd`
+	@for file in $(DISTFILES); do \
+	  d=$(srcdir); \
+	  if test -d $$d/$$file; then \
+	    cp -pr $$/$$file $(distdir)/$$file; \
+	  else \
+	    test -f $(distdir)/$$file \
+	    || ln $$d/$$file $(distdir)/$$file 2> /dev/null \
+	    || cp -p $$d/$$file $(distdir)/$$file || :; \
+	  fi; \
+	done
 
 
 
