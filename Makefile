@@ -4,11 +4,11 @@ HTML = index.html screenshots.html roadmap.html
 PRE = README.html
 CSS = layout.css colors.css
 IMAGES = ooimpress.png ooimpress-matplotlib.png
-
+WEBSITE = $(CSS) $(HTML) $(PRE) $(IMAGES)
 
 # Distribution stuff
 TAR = tar
-GZIP = gzip
+GZIP = gzip -f
 
 PACKAGE := pyemf
 VERSION := $(shell grep __version__ pyemf.py|head -n1|cut -d \" -f 2)
@@ -20,7 +20,8 @@ top_builddir = .
 distdir := $(PACKAGE)-$(VERSION)
 top_distdir := $(distdir)
 
-DISTFILES = pyemf.py setup.py README LICENSE test?.py
+DISTFILES = pyemf.py setup.py README LICENSE
+DISTFILE_TESTS = test?.py
 
 
 .SUFFIXES:      .html.in .pre.in .html
@@ -59,7 +60,7 @@ doc: README
 html: api/index.html $(HTML) $(PRE)
 
 install_html: html
-	rsync -avuz $(CSS) $(HTML) $(PRE) $(IMAGES) api robm@pyemf.sourceforge.net:/home/groups/p/py/pyemf/htdocs
+	rsync -avuz $(WEBSITE) api robm@pyemf.sourceforge.net:/home/groups/p/py/pyemf/htdocs
 
 
 
@@ -78,19 +79,24 @@ distdir: $(DISTFILES)
 	@for file in $(DISTFILES); do \
 	  d=$(srcdir); \
 	  if test -d $$d/$$file; then \
-	    cp -pr $$/$$file $(distdir)/$$file; \
+	    cp -pr $$d/$$file $(distdir)/$$file; \
 	  else \
 	    test -f $(distdir)/$$file \
 	    || ln $$d/$$file $(distdir)/$$file 2> /dev/null \
 	    || cp -p $$d/$$file $(distdir)/$$file || :; \
 	  fi; \
 	done
+	mkdir $(distdir)/website
+	cp $(WEBSITE) $(distdir)/website
+	cp -r api $(distdir)/website
+	mkdir $(distdir)/examples
+	cp $(DISTFILE_TESTS) $(distdir)/examples
 
 
 
 
 clean:
-	rm -rf *~ *.o *.exe build api README README.html index.html screenshots.html
+	rm -rf *~ *.o *.exe build api README README.html index.html screenshots.html $(distdir)
 
 .PHONY: print-% clean install_html html doc
 
