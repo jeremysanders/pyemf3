@@ -1,0 +1,80 @@
+<h1>Version Numbers</h1>
+
+<p>$prog follows the Python standard of version numbers for modules:
+major.minor.patchlevel[subrelease].  From the <a
+href="http://docs.python.org/dist/meta-data.html">distutils
+docs</a>:</p>
+
+<div class="cite">
+The major number is 0 for initial, experimental releases of
+software. It is incremented for releases that represent major
+milestones in a package. The minor number is incremented when
+important new features are added to the package. The patch number
+increments when bug-fix releases are made. Additional trailing version
+information is sometimes used to indicate sub-releases. These are
+"a1,a2,...,aN" (for alpha releases, where functionality and API may
+change), "b1,b2,...,bN" (for beta releases, which only fix bugs)
+</div>
+
+<P>Obviously, I'm not starting at major number 0.  See below.
+
+
+<h1>History</h1>
+
+<dl>
+<dt>1.0.0 - <emph>Abandoned</emph></dt>
+<dd>
+
+<p>This was an almost-complete <a href="http://www.swig.org">SWIG</a>
+wrapper around <a href="http://libemf.sourceforge.net">libEMF</a>.
+But, it's harder to distribute a SWIG module that a pure python one,
+and I also wanted to support a few more features than were available
+in libEMF.</p>
+
+</dd>
+
+
+
+<dt>2.0.0 - <emph>Currently in development at version $version</emph></dt>
+<dd>
+
+<P>This is the current version.  I had to change major numbers because
+the API changed from version 1.*.  At the time, I wasn't sure how long
+it would take me to code up version 2.* and was thinking that I might
+release version 1 in the interrim.</p>
+
+<P>But, I was able to code up version 2.0.0b1 in a reasonable time,
+but by then I was far enough along in my thinking that I just left the
+version numbers alone.  A bit strange to release a version 2.* before
+a 1.* became public, but given the amount of time I invested in
+version 1.0.0 and debugging the SWIG interface, I at least want to
+give a nod to myself for some good effort.</p>
+
+</dd>
+
+<dt>2.1.0 - <emph>Future plans</emph></dt>
+<dd>
+
+<P>Things I'd like to support:</p>
+
+<ul>
+<li>understand the viewport origin and extent commands</li>
+<li>understand the window origin and extent commands</li>
+</ul>
+
+</dd>
+
+<P>&nbsp;</p>
+
+
+<dt>2.x.0 - <emph>Way future plans</emph></dt>
+<dd>
+
+<P>Somewhere off in the distance...</p>
+
+<ul>
+<li>Font metrics.   Maybe.</li>
+</ul>
+
+</dd>
+</dl>

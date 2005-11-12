@@ -3,22 +3,43 @@ href="http://www.ecma-international.org/publications/standards/Ecma-234.htm">ECM
 compliant vector graphics library.  ECMA-234 is the published
 interface for the Windows GDI used in the Microsoft windows
 environment and, more importantly, natively supported by the <a
-href="www.openoffice.org">OpenOffice</a> suite of tools.  </p>
+href="www.openoffice.org">OpenOffice</a> suite of tools.</p>
 
 
 <h1>Why?</h1>
 
-<p>This is the only way I could automate document generation via Python that:
+<p>I needed to have some way to generate reports with both text and
+graphics, and to be able to email those reports to people who use
+Windows.  The users also needed they ability to cut out the graphics
+and paste them into powerpoint slides.  My one real requirement was
+vector graphics so that the resuling powerpoint wouldn't look nasty
+when the graphics were resized.</p>
+
+<P>Initially thought about HTML, but it's inconvienent emailing a zip
+file full of multiple files.  There is a format called "MHTML" that
+allows images and text to be included in a single file, but it is
+non-standard.  I then thought about PDF and EPS, and went down that
+road for a while with the very nice toolkits <a
+href="http://www.reportlab.org">ReportLab</a> and <a
+href="http://matplotlib.sourceforge.net/">Matplotlib</a>.  But, PDF
+(or at least Adobe Reader on Windows) has the restriction that you
+can't copy EPS figures from within a PDF and paste them anywhere.  So,
+that turned out not to be a workable solution.</p>
+
+<P>I had to build $prog because this is the only way I could automate document generation via Python that:</p>
+
 <ol>
 <li>uses vector (scalable) graphics
 <li>allows bundling of multiple graphics files and text into a single file (via <a href="http://pyrtf.sourceforge.net">PyRTF</a>)</li>
 <li>was cross platform (I had to support the Windows world)
 </ol>
-RTF files are supported by OpenOffice as well as (of course) Microsoft Word.</p>
+
+<P>RTF files are supported by OpenOffice as well as (of course)
+Microsoft Word.</p>
 
 <h1>History</h1>
 
-<p> Not knowing anything about Windows graphics files, I stumbled upon
+<p>Not knowing anything about Windows graphics files, I stumbled upon
 <a href="http://libemf.sourceforge.net">libEMF</a> and searched in
 vain for a python binding for libEMF.  Not having found one, I
 actually wrote a version 1.0 of pyemf using <a
@@ -43,9 +64,9 @@ unnecessary, but this can fill the void in the meantime.</p>
 
 <h1>Current Version</h1>
 
-<p>
-$prog $version, released $release_date.  Available at the <a href="http://sourceforge.net/project/showfiles.php?group_id=148144">download page</a>
-</p>
+<p>$prog $version, released $release_date.  Available at the <a
+href="http://sourceforge.net/project/showfiles.php?group_id=148144">download
+page</a> </p>
 
 
 <h1>License</h1>

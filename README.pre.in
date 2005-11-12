@@ -33,56 +33,97 @@ Yep, that's pretty much it.
 
 
 
-BACKGROUND
-==========
-
-I needed to have some way to generate some reports with graphics, and
-I needed to be able to email them to people so that the could cut out
-some graphics and paste them into powerpoint slides.  My one real
-requirement was vector graphics so that the resuling powerpoint
-wouldn't look nasty when the graphics were resized. Initially thought
-about HTML, but it's inconvienent emailing a zip file full of multiple
-files.  There is a format called "MHTML" that allows images and text
-to be included in a single file, but it is non-standard.  I then
-thought about PDF and EPS, and went down that road for a while with
-ReportLab (http://www.reportlab.org) and Matplotlib
-(http://matplotlib.sourceforge.net/) and got it to generate documents.
-But, the PDF (or at least Adobe Reader on Windows) has the restriction
-that you can't copy EPS figures from within a PDF and paste them
-anywhere.  So, that turned out not to be a workable solution.
-
-Not knowing anything about Windows graphics files, I stumbled upon
-libEMF (http://libemf.sourceforge.net) and searched in vain for a
-python binding for libEMF.  Not having found one, I wrote pyemf 1.0 to
-fill this gap, but decided to write pyemf 2.0 as a pure python
-implementation before even officially releasing pyemf 1.0.  That means
-that all the time I spent building pyemf 1.0 really became an exercise
-to learn how SWIG (http://www.swig.org) works.  But, that's OK,
-because there were a few features left out of libEMF that I can now
-add in without waiting for them to be added to libEMF.
-
-So, using modified versions of PyRTF (http://pyrtf.sourceforge.net)
-and Matplotlib, I can now generate RTF documents that include vector
-graphics.  These documents are modifiable by both Microsoft Word and
-OpenOffice Writer, satisfying the need to be cross platform.
-
-I suppose when SVG is understood by Word and OpenOffice, EMF will
-become unnecessary, but this can fill the void in the meantime.
-
-
-
 FEATURES
 ========
 
 Most of the methods of ECMA-234 are supported by pyemf.  Exceptions
 are noted below, but generally the font support is limited in pyemf.
 
+  Drawing Parameters: GetStockObject, SelectObject, DeleteObject,
+  CreatePen, CreateSolidBrush, CreateHatchBrush, SetBkColor,
+  SetBkMode, SetPolyFillMode
+
+  Drawing Primitives: SetPixel, Polyline, Polygon, Rectangle,
+  RoundRect, Ellipse, Arc, Chord, Pie, PolyBezier
+
+  Path Primatives: BeginPath, EndPath, MoveTo, LineTo, PolylineTo,
+  ArcTo, PolyBezierTo, CloseFigure, FillPath, StrokePath,
+  StrokeAndFillPath
+
+  Text: CreateFont, SetTextAlign, SetTextColor, TextOut
+
+  Coordinate System Transformation: SetWorldTransform,
+  ModifyWorldTransform
+
+Unsupported
+-----------
+
+Palettes, bitmaps, and text metrics.
+
+
+
+
+EXAMPLES
+========
+
+
+Creating an EMF
+---------------
+
+Here's a simple program (available as test1.py in the distribution)
+that connects opposite corners of an 8in by 6in rectangle with lines:
+
+#!/usr/bin/env python
+
+import pyemf
+
+width=8
+height=6
+dpi=300
+
+emf=pyemf.EMF(width,height,dpi)
+thin=emf.CreatePen(PS_SOLID,1,(0x00,0x00,0x00))
+emf.SelectObject(thin)
+emf.Polyline([(0,0),(width*dpi,height*dpi)])
+emf.Polyline([(0,height*dpi),(width*dpi,0)])
+emf.save("test1.emf")
+
+
+Examining an EMF
+----------------
+
+pyemf, when run as a standalone program, has the ability to read an
+EMF and print out the contents.  Run:
+
+$ pyemf.py -v test1.emf
+
+and it will print out a text summary of all the metafile records in
+the file.
+
 
 
 KNOWN ISSUES
 ============
 
--- Text metrics functions are stubbed out
+-- Window and Viewport extents are not well understoood
+
+I'm still trying to understand the various permutations of units set
+by SetMapMode and how they effect the viewport and window extents.
+So, all the functions Set[Viewport|Window][Org|Ext]Ex exist in pyemf,
+but they aren't guarenteed to do the right thing, unless you the user
+happen to know what the right thing is.
+
+I certainly don't know what the right thing is yet in all cases.  The
+ECMA spec is unclear, and the Microsoft docs are fuzzy at best.
+
+
+-- Bitmap functions don't exist
+
+Since I wanted to support the vector graphics capabilities, bitmap
+support wasn't a high priority to me.  Patches welcome, however.
+
+
+-- Text metrics functions don't exist
 
 A full GDI implementation would include font metrics such that fine
 grained control over glyph placement is available.  To really do text
@@ -112,29 +153,6 @@ which should measure the width and height of a string.  But also of
 interest are how CreateFont and CreateFontIndirect and how they
 specify fonts.
 
-
-
-
-EXAMPLE
-=======
-
-Here's a simple program (available as test1.py in the distribution)
-that connects opposite corners of an 8in by 6in rectangle with lines:
-
-#!/usr/bin/env python
-
-import pyemf
-
-width=8
-height=6
-dpi=300
-
-emf=pyemf.EMF(width,height,dpi)
-thin=emf.CreatePen(PS_SOLID,1,(0x00,0x00,0x00))
-emf.SelectObject(thin)
-emf.Polyline([(0,0),(width*dpi,height*dpi)])
-emf.Polyline([(0,height*dpi),(width*dpi,0)])
-emf.save("test1.emf")
 
 
 

@@ -1,8 +1,9 @@
 <ul>
 <li><a href="$url">Home</a></li>
-<li><a href="$url/api/">API Documentation</a></li>
-<li><a href="$url/screenshots.html">Screenshots</a></li>
-<li><a href="$url/README.html">README</a></li>
+<li><a href="api/index.html">API docs</a></li>
+<li><a href="screenshots.html">Screenshots</a></li>
+<li><a href="roadmap.html">Roadmap</a></li>
+<li><a href="README.html">README</a></li>
 <li><a href="http://sourceforge.net/project/showfiles.php?group_id=148144">Download</a></li>
 <li><a href="http://cvs.sourceforge.net/viewcvs.py/pyemf">Browse CVS</a></li>
 <li><a href="http://sourceforge.net/projects/pyemf">Project Page</a></li>

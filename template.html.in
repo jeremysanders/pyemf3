@@ -20,14 +20,18 @@
 			<div id="sidebarTabs"></div>
 		</div>
 		<div id="displayArea">
+#if $htmlBody
 			<div id="htmlBody">
 				$htmlBody
 			</div>
+#end if
+#if $preBody
 			<div id="preBody">
 <pre>
 $preBody
 </pre>
 			</div>
+#end if
 		</div>
 		<div id="footer">
 			<div id="signatureLine">
