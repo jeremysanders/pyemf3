@@ -7,8 +7,8 @@ IMAGES = ooimpress.png ooimpress-matplotlib.png
 
 
 # Distribution stuff
-TAR = gtar
-GZIP_ENV = --best
+TAR = tar
+GZIP = gzip
 
 PACKAGE := pyemf
 VERSION := $(shell grep __version__ pyemf.py|head -n1|cut -d \" -f 2)
@@ -66,7 +66,8 @@ install_html: html
 
 dist: distdir
 	-chmod -R a+r $(distdir)
-	GZIP=$(GZIP_ENV) $(TAR) chozf $(distdir).tar.gz $(distdir)
+	$(TAR) cvf $(distdir).tar $(distdir)
+	$(GZIP) $(distdir).tar
 	-rm -rf $(distdir)
 
 distdir: $(DISTFILES)
