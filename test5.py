@@ -24,7 +24,7 @@ height=6
 dpi=300
 pointstopixels=dpi/72.0
 
-emf=pyemf.EMF(width,height,dpi,verbose=True)
+emf=pyemf.EMF(width,height,dpi,verbose=False)
 brush=emf.CreateSolidBrush((0x7f,0x7f,0xff))
 emf.SelectObject(brush)
 dashed=emf.CreatePen(pyemf.PS_DASHDOT,1,(0xf0,0x00,0x80))

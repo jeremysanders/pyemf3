@@ -7,7 +7,7 @@ height=6
 dpi=300
 pointstopixels=dpi/72.0
 
-emf=pyemf.EMF(width,height,dpi,verbose=True)
+emf=pyemf.EMF(width,height,dpi,verbose=False)
 brush=emf.CreateSolidBrush((0xff,0x00,0xff))
 emf.SelectObject(brush)
 thick=emf.CreatePen(pyemf.PS_SOLID,10,(0x00,0xff,0x00))

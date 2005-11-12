@@ -9,7 +9,7 @@ height=6
 dpi=100
 pointstopixels=dpi/72.0
 
-emf=pyemf.EMF(width,height,dpi,verbose=True)
+emf=pyemf.EMF(width,height,dpi,verbose=False)
 pen=emf.GetStockObject(pyemf.BLACK_PEN)
 emf.SelectObject(pen)
 
