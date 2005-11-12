@@ -78,3 +78,65 @@ give a nod to myself for some good effort.</p>
 
 </dd>
 </dl>
+
+
+<h1>Known Issues</h1>
+
+<dl>
+<dt>Window and Viewport extents are not well understoood</dt>
+<dd>
+
+<P>I'm still trying to understand the various permutations of units
+set by SetMapMode and how they effect the viewport and window extents.
+So, all the functions [Set|Get|Scale][Viewport|Window][Org|Ext]Ex
+exist in pyemf, but they aren't guarenteed to do the right thing,
+unless you the user happen to know what the right thing is.</p>
+
+<P>I certainly don't know what the right thing is yet in all cases.  The
+ECMA spec is unclear, and the Microsoft docs are fuzzy at best.</p>
+
+</dd>
+
+<dt>Bitmap functions don't exist</dt>
+<dd>
+
+<P>Since I wanted to support the vector graphics capabilities, bitmap
+support wasn't a high priority to me.  Patches welcome, however.</p>
+
+</dd>
+
+<dt>Text metrics functions don't exist</dt>
+<dd>
+
+<P>A full GDI implementation would include font metrics such that fine
+grained control over glyph placement is available.  To really do text
+extents properly, a complete font metrics package would need to be
+added.  This requires a module that could link to something like
+freetype.  There is a freetype module included in matplotlib that I
+may look at for some future release, and in fact for my matplotlib
+modifications, I've used the freetype module with a bit of hackery to
+be able to place text strings in relation to one another.</P>
+
+<P>So, only the basics of font support are included.  It seems to be a
+bit renderer dependent as to how the fonts will be chosen based on the
+specifications to CreateFontA.  For example, what happens when you
+request a font that isn't available on your target computer?  I
+suppose this problem isn't limited to pyemf, but to any EMF that uses
+fonts.</P>
+
+<P>Comparing the output on PowerPoint vs OpenOffice Impress seems to show
+that fonts render about the same, but in terms of precisely placing
+strings of text in relation to other strings (e.g. knowing where a
+string ends so you could append a string right after that), it seems
+that we're a bit out of luck for the moment unless we can integrate it
+with some external library for metrics.</P>
+
+<P>I'm still needing to do more research before I add font extents to
+pyemf.  If you're curious and want to figure out how this stuff works
+in GDI, the prime suspect is the function GetTextExtentPoint32A(),
+which should measure the width and height of a string.  But also of
+interest are how CreateFont and CreateFontIndirect and how they
+specify fonts.</P>
+
+</dd>
+</dl>
