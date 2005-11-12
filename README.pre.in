@@ -36,29 +36,36 @@ Yep, that's pretty much it.
 FEATURES
 ========
 
-Most of the methods of ECMA-234 are supported by pyemf.  Exceptions
-are noted below, but generally the font support is limited in pyemf.
+Most of the drawing methods of ECMA-234 are supported by pyemf.
 
-  Drawing Parameters: GetStockObject, SelectObject, DeleteObject,
-  CreatePen, CreateSolidBrush, CreateHatchBrush, SetBkColor,
-  SetBkMode, SetPolyFillMode
+Supported
+---------
 
-  Drawing Primitives: SetPixel, Polyline, Polygon, Rectangle,
-  RoundRect, Ellipse, Arc, Chord, Pie, PolyBezier
+  Drawing parameters:
+    GetStockObject, SelectObject, DeleteObject, CreatePen,
+    CreateSolidBrush, CreateHatchBrush, SetBkColor, SetBkMode,
+    SetPolyFillMode
 
-  Path Primatives: BeginPath, EndPath, MoveTo, LineTo, PolylineTo,
-  ArcTo, PolyBezierTo, CloseFigure, FillPath, StrokePath,
-  StrokeAndFillPath
+  Drawing primitives:
+    SetPixel, Polyline, Polygon, Rectangle, RoundRect, Ellipse, Arc,
+    Chord, Pie, PolyBezier
 
-  Text: CreateFont, SetTextAlign, SetTextColor, TextOut
+  Path primatives:
+    BeginPath, EndPath, MoveTo, LineTo, PolylineTo, ArcTo,
+    PolyBezierTo, CloseFigure, FillPath, StrokePath, StrokeAndFillPath
 
-  Coordinate System Transformation: SetWorldTransform,
-  ModifyWorldTransform
+  Text:
+    CreateFont, SetTextAlign, SetTextColor, TextOut
+
+  Coordinate system transformation:
+    SetWorldTransform, ModifyWorldTransform
 
 Unsupported
 -----------
 
-Palettes, bitmaps, and text metrics.
+  Palettes
+  Bitmaps
+  Text metrics
 
 
 
@@ -100,12 +107,25 @@ and it will print out a text summary of all the metafile records in
 the file.
 
 
+Other tests
+-----------
+
+There are many other tests included in the source distribution.  After
+installing the pyemf library, you should be able to run them like
+this:
+
+$ python test5.py
+
+and examine the output file 'test5.emf' by loading it in OpenOffice
+Impress.
+
+
 
 KNOWN ISSUES
 ============
 
 See the website at $url/roadmap.html for more
-information on issues and deficiencies in the code.
+information on the unsupported parts of the ECMA-234 standard.
 
 
 
