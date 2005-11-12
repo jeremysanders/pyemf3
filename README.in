@@ -1,8 +1,8 @@
-pyemf 2.0.0b1
-29 September 2005
-Copyright (c) 2005 Rob McMullen (robm@users.sourceforge.net)
+$prog $version
+$release_date
+Copyright (c) $year $author ($author_email)
 
-http://pyemf.sourceforge.net/
+$url
 
 
 
@@ -21,7 +21,7 @@ http://www.ecma-international.org/publications/standards/Ecma-234.htm
 PREREQUISITES
 =============
 
-python (tested under 2.3 and 2.4; should work under earlier versions)
+python (tested under 2.2, 2.3 and 2.4)
 
 
 QUICK INSTALL
@@ -82,12 +82,6 @@ are noted below, but generally the font support is limited in pyemf.
 KNOWN ISSUES
 ============
 
--- Wide character functions aren't supported
-
-It wasn't a priority for me for the first release, but patches are
-welcome.
-
-
 -- Text metrics functions are stubbed out
 
 A full GDI implementation would include font metrics such that fine
@@ -147,8 +141,8 @@ emf.save("test1.emf")
 DISCLAIMER
 ==========
 
-pyemf, Copyright (c) 2005 Rob McMullen (robm@users.sourceforge.net)
+$prog, Copyright (c) $year $author ($author_email)
 
-pyemf comes with ABSOLUTELY NO WARRANTY; for details see the
+$prog comes with ABSOLUTELY NO WARRANTY; for details see the
 file COPYING included in the source distribution, or see the web site
 http://www.gnu.org/copyleft/lesser.html for more information.
