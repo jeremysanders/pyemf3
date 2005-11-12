@@ -32,6 +32,7 @@ __version__ = "2.0.0b1"
 __author__ = "Rob McMullen"
 __author_email__ = "robm@users.sourceforge.net"
 __url__ = "http://pyemf.sourceforge.net"
+__description__ = "Pure Python Enhanced Metafile Library"
 
 # Reference: libemf.h
 # and also wine: http://cvs.winehq.org/cvsweb/wine/include/wingdi.h

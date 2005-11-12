@@ -1,0 +1,55 @@
+<p>pyemf is a pure python module that provides bindings for an <a
+href="http://www.ecma-international.org/publications/standards/Ecma-234.htm">ECMA-234</a>
+compliant vector graphics library.  ECMA-234 is the published
+interface for the Windows GDI used in the Microsoft windows
+environment and, more importantly, natively supported by the <a
+href="www.openoffice.org">OpenOffice</a> suite of tools.  </p>
+
+
+<h1>Why?</h1>
+
+<p>This is the only way I could automate document generation via Python that:
+<ol>
+<li>uses vector (scalable) graphics
+<li>allows bundling of multiple graphics files and text into a single file (via <a href="http://pyrtf.sourceforge.net">PyRTF</a>)</li>
+<li>was cross platform (I had to support the Windows world)
+</ol>
+RTF files are supported by OpenOffice as well as (of course) Microsoft Word.</p>
+
+<h1>History</h1>
+
+<p> Not knowing anything about Windows graphics files, I stumbled upon
+<a href="http://libemf.sourceforge.net">libEMF</a> and searched in
+vain for a python binding for libEMF.  Not having found one, I
+actually wrote a version 1.0 of pyemf using <a
+href="http://www.swig.org">SWIG</a> to create a wrapper around
+libEMF.</p>
+
+<p>But, before even officially releasing pyemf 1.0, but decided to
+write pyemf 2.0 as a pure python implementation .  That means that all
+the time I spent building (and debugging!) pyemf 1.0 really became an
+exercise to learn how SWIG works.  But, that's OK, because there were
+a few features left out of libEMF that I can now add in without
+waiting for them to be added to libEMF.</p>
+
+<p>I've submitted patches to the maintainer of PyRTF and shortly will
+to <a href="http://matplotlib.sourceforge.net/">Matplotlib</a>, I can
+now generate RTF documents that include snazzy scientific plots.
+These documents are modifiable by both Microsoft Word and OpenOffice
+Writer, satisfying the need to be cross platform.</p>
+
+<P>When SVG is understood by Word and OpenOffice (OpenDoc?), EMF will become
+unnecessary, but this can fill the void in the meantime.</p>
+
+<h1>Current Version</h1>
+
+<p>
+$prog $version, released $release_date.  Available at the <a href="http://sourceforge.net/project/showfiles.php?group_id=148144">download page</a>
+</p>
+
+
+<h1>License</h1>
+
+<p>
+$prog is licensed under the <a href="http://www.gnu.org/copyleft/lesser.html">LGPL</a>
+</p>

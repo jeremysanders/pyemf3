@@ -14,21 +14,23 @@ if sys.version < '2.2.3':
 # freshly unpacked version here.
 import pyemf
 
-pyemf_version=str(pyemf.__version__)
-pyemf_author=pyemf.__author__
-pyemf_email=pyemf.__author_email__
-pyemf_url=pyemf.__url__
+module_version=str(pyemf.__version__)
+module_author=pyemf.__author__
+module_email=pyemf.__author_email__
+module_url=pyemf.__url__
+module_description=pyemf.__description__
+module_list=['pyemf']
 
-print "Version = %s" % pyemf_version
+#print "Version = %s" % module_version
 
 setup(name = "pyemf",
-      version = pyemf_version,
-      description = "Python library for EMF vector graphics",
-      author = pyemf_author,
-      author_email = pyemf_email,
-      url = pyemf_url,
+      version = module_version,
+      description = module_description,
+      author = module_author,
+      author_email = module_email,
+      url = module_url,
       platforms='any',
-      py_modules = ['pyemf'],
+      py_modules = module_list,
       
       classifiers=['Development Status :: 4 - Beta',
                    'Intended Audience :: by End-User Class :: Developers',
