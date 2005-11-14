@@ -22,7 +22,7 @@ change), "b1,b2,...,bN" (for beta releases, which only fix bugs)
 <h1>History</h1>
 
 <dl>
-<dt>1.0.0 - <emph>Abandoned</emph></dt>
+<dt>1.0 - <emph>Abandoned</emph></dt>
 <dd>
 
 <p>This was an almost-complete <a href="http://www.swig.org">SWIG</a>
@@ -35,7 +35,7 @@ in libEMF.</p>
 
 
 
-<dt>2.0.0 - <emph>Currently in development at version $version</emph></dt>
+<dt>2.0 - <emph>Currently in development at version $version</emph></dt>
 <dd>
 
 <P>This is the current version.  I had to change major numbers because
@@ -43,7 +43,7 @@ the API changed from version 1.*.  At the time, I wasn't sure how long
 it would take me to code up version 2.* and was thinking that I might
 release version 1 in the interrim.</p>
 
-<P>But, I was able to code up version 2.0.0b1 in a reasonable time,
+<P>But, I was able to code up version 2.0.0 in a reasonable time,
 but by then I was far enough along in my thinking that I just left the
 version numbers alone.  A bit strange to release a version 2.* before
 a 1.* became public, but given the amount of time I invested in
@@ -52,7 +52,7 @@ give a nod to myself for some good effort.</p>
 
 </dd>
 
-<dt>2.1.0 - <emph>Future plans</emph></dt>
+<dt>2.1 - <emph>Future plans</emph></dt>
 <dd>
 
 <P>Things I'd like to support:</p>
@@ -67,7 +67,7 @@ give a nod to myself for some good effort.</p>
 <P>&nbsp;</p>
 
 
-<dt>2.x.0 - <emph>Way future plans</emph></dt>
+<dt>2.x - <emph>Way future plans</emph></dt>
 <dd>
 
 <P>Somewhere off in the distance...</p>
