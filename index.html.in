@@ -29,9 +29,9 @@ that turned out not to be a workable solution.</p>
 <P>I had to build $prog because this is the only way I could automate document generation via Python that:</p>
 
 <ol>
-<li>uses vector (scalable) graphics
+<li>uses vector (scalable) graphics</li>
 <li>allows bundling of multiple graphics files and text into a single file (via <a href="http://pyrtf.sourceforge.net">PyRTF</a>)</li>
-<li>was cross platform (I had to support the Windows world)
+<li>was cross platform (I had to support the Windows world)</li>
 </ol>
 
 <P>RTF files are supported by OpenOffice as well as (of course)

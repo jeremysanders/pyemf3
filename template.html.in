@@ -1,6 +1,11 @@
-<html><head><title>$prog - $description</title>
-<link href="layout.css" rel="stylesheet">
-<link href="colors.css" rel="stylesheet">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+
+<head>
+	<title>$prog - $description</title>
+	<link href="layout.css" rel="stylesheet" />
+	<link href="colors.css" rel="stylesheet" />
 </head>
 
 <body>
@@ -39,9 +44,11 @@ $preBody
 				<div id="signatureDate">Last updated: 12 November 2005</div>
 			</div>
 			<div id="signatureLogo">
-				<a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=148144" width="88" height="31" border="0" alt="SourceForge Logo"></a>
+				<a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=148144" width="88" height="31" border="0" alt="SourceForge Logo" /></a>
 			</div>
 		</div>
 	</div>
 </body>
+
+</html>
 
