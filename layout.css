@@ -46,6 +46,10 @@ a:link, a:visited, a:hover, a:active{
   padding-left: 1em;
 }
 
+#sidebar { 
+  display: none;
+}
+
 #displayArea {
 	margin: 1em 3em 1em 14em;
 }
@@ -56,21 +60,25 @@ a:link, a:visited, a:hover, a:active{
 }
 
 
+/* padding hack for IE.  If I do padding: 4px here and no padding
+   on the signature line or logo, the top of the logo is chopped
+   off. */
 #footer { 
   border-top-width: 1px;
   border-top-style: solid;
-  padding: 4px;
+  padding: 0px 4px 0px 4px;
+  margin: 0;
 }
 
+#signatureLine { 
+  padding-top: 4px;
+  float: left;
+}
 
 #signatureLogo { 
+  padding-top: 0px;
+  margin-top: 2px;
   float: right;
-}
-
-
-#signatureDate { 
-  display: block;
-  float: left;
 }
 
 
