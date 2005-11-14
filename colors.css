@@ -1,0 +1,71 @@
+#titleLine {
+  color: #000;
+  background: #fff;
+  border-bottom-color: #97ced5;
+}
+
+
+/* Entire sidebar, including now the mainMenu */
+#sidebar {
+  background: #080; /* highlight areas that aren't covered */
+}
+
+
+
+#mainMenu{
+  background: #f0f0ff;
+  border-color: #97ced5;
+}
+
+
+
+/* The option menu, including the search bar and the new tiddler buttons */
+#sidebarOptions {
+  background: #feffff;
+  border-color: #97ced5;
+}
+
+
+
+#sidebarTabs {
+  background: #f9f9f9;
+}
+
+
+
+
+/* Message area is the popup area below the title that displays
+temporary informational messages, as in after saving the file or to
+display the number of matches in a search */
+
+#messageArea {
+	background: #ff6;
+	color: #000;
+}
+
+
+#contentWrapper {
+  background: #f0f0ff;
+}
+
+
+#footer { 
+  background: #feffff;
+}
+
+
+
+.note { 
+  background: #feffff;
+  border-color: red;
+}
+
+.note:before { 
+  color: red;
+}
+
+.cite { 
+  background: #feffff;
+  border-color: #97ced5;
+}
+

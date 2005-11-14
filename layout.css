@@ -1,0 +1,100 @@
+body {
+	font-size: 9pt;
+	font-family: verdana,arial,helvetica;
+	margin: 0;
+	padding: 0;
+	position: relative;
+	z-index: 0;
+}
+
+a:link, a:visited, a:hover, a:active{
+	font-weight: bold;
+}
+
+#contentWrapper {
+	position: relative;
+}
+
+#titleLine {
+  padding: 1em 1em 1em 1em;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+}
+
+#siteTitle {
+	font-size: 26pt;
+}
+
+#siteSubtitle {
+	padding-left: 1em;
+	font-size: 10pt;
+}
+
+#mainMenu {
+	position: absolute;
+	left: 0em;
+	width: 10em;
+	line-height: 166%;
+	padding: 1em 0.5em 0.5em 0.5em;
+	font-size: 10pt;
+	text-align: left;
+}
+
+
+#mainMenu ul {
+  margin-left: 0;
+  padding-left: 1em;
+}
+
+#displayArea {
+	margin: 1em 3em 1em 14em;
+}
+
+#htmlBody {
+	/*margin: 1em 17em 0em 14em;*/
+	padding: 0.5em;
+}
+
+
+#footer { 
+  border-top-width: 1px;
+  border-top-style: solid;
+  padding: 4px;
+}
+
+
+#signatureLogo { 
+  float: right;
+}
+
+
+#signatureDate { 
+  display: block;
+  float: left;
+}
+
+
+
+.note { 
+  border-width: 1px;
+  border-style: solid;
+  line-height: 1.1em;
+
+  padding: .7em;
+  margin-left: 1em;
+  overflow: visible;
+}
+
+.note:before { 
+  content: "Note:";
+}
+
+.cite { 
+  border-width: 1px;
+  border-style: dashed;
+/*  line-height: 1.1em; */
+
+  padding: .7em 1em;
+  margin: 0 1em;
+  overflow: visible;
+}
