@@ -39,7 +39,7 @@ DISTFILE_TESTS = test?.py
 all: html doc
 
 api/index.html: pyemf.py
-	epydoc -o api -u 'http://pyemf.sourceforge.net' pyemf.py
+	epydoc -o api --no-private -u 'http://pyemf.sourceforge.net' pyemf.py
 
 README: README.pre.in
 	./Makedoc.py -o README README.pre.in
@@ -88,7 +88,7 @@ distdir: $(DISTFILES)
 	done
 	mkdir $(distdir)/website
 	cp $(WEBSITE) $(distdir)/website
-	cp -r api $(distdir)/website
+	epydoc -o $(distdir)/website/api --no-private -u '../index.html' pyemf.py
 	mkdir $(distdir)/examples
 	cp $(DISTFILE_TESTS) $(distdir)/examples
 
