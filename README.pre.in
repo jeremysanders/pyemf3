@@ -60,6 +60,14 @@ Supported
   Coordinate system transformation:
     SetWorldTransform, ModifyWorldTransform
 
+Experimental
+------------
+
+  Window/Viewport commands:
+    SetMapMode, SetViewportOrgEx, GetViewportOrgEx, SetViewportExtEx,
+    ScaleViewportExtEx, GetViewportExtEx, SetWindowOrgEx,
+    GetWindowOrgEx, SetWindowExtEx, ScaleWindowExtEx, GetWindowExtEx
+
 Unsupported
 -----------
 
@@ -110,10 +118,11 @@ the file.
 Other tests
 -----------
 
-There are many other tests included in the source distribution.  After
-installing the pyemf library, you should be able to run them like
-this:
+There are many other tests included in the examples/ directory in the
+source distribution.  After installing the pyemf library, you should
+be able to run them like this:
 
+$ cd examples
 $ python test5.py
 
 and examine the output file 'test5.emf' by loading it in OpenOffice
