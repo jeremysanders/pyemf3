@@ -3,7 +3,25 @@ href="http://www.ecma-international.org/publications/standards/Ecma-234.htm">ECM
 compliant vector graphics library.  ECMA-234 is the published
 interface for the Windows GDI used in the Microsoft windows
 environment and, more importantly, natively supported by the <a
-href="www.openoffice.org">OpenOffice</a> suite of tools.</p>
+href="http://www.openoffice.org">OpenOffice</a> suite of tools.</p>
+
+
+<h1>EMF Overview</h1>
+
+<p>An Enhanced Metafile (EMF) is a vector graphics format developed by
+a certain company in Redmond, WA that is a native format in Windows.
+It supports a fairly robust set of graphics primitives like lines,
+arcs, bezier curves, and fonts, and has the ability to use linear
+transforms to rotate, scale, shear, and translate from the world
+coordinate system onto the page.</p>
+
+<p>The important application in the open source community is through
+OpenOffice and its ability to read RTF files.  With the Python
+libraries <a href="http://pyrtf.sourceforge.net">PyRTF</a> and <a
+href="http://matplotlib.sourceforge.net/">Matplotlib</a> hopefully
+soon including EMF support (patches have been submitted), it is
+possible to create a single file that includes both text and graphics,
+and is usable on Windows, Linux/Unix, and MacOS.</p>
 
 
 <h1>Why?</h1>
@@ -20,9 +38,8 @@ file full of multiple files.  There is a format called "MHTML" that
 allows images and text to be included in a single file, but it is
 non-standard.  I then thought about PDF and EPS, and went down that
 road for a while with the very nice toolkits <a
-href="http://www.reportlab.org">ReportLab</a> and <a
-href="http://matplotlib.sourceforge.net/">Matplotlib</a>.  But, PDF
-(or at least Adobe Reader on Windows) has the restriction that you
+href="http://www.reportlab.org">ReportLab</a> and Matplotlib.  But,
+PDF (or at least Adobe Reader on Windows) has the restriction that you
 can't copy EPS figures from within a PDF and paste them anywhere.  So,
 that turned out not to be a workable solution.</p>
 
@@ -30,12 +47,10 @@ that turned out not to be a workable solution.</p>
 
 <ol>
 <li>uses vector (scalable) graphics</li>
-<li>allows bundling of multiple graphics files and text into a single file (via <a href="http://pyrtf.sourceforge.net">PyRTF</a>)</li>
+<li>allows bundling of multiple graphics files and text into a single file (via PyRTF)</li>
 <li>was cross platform (I had to support the Windows world)</li>
 </ol>
 
-<P>RTF files are supported by OpenOffice as well as (of course)
-Microsoft Word.</p>
 
 <h1>History</h1>
 
@@ -59,8 +74,9 @@ now generate RTF documents that include snazzy scientific plots.
 These documents are modifiable by both Microsoft Word and OpenOffice
 Writer, satisfying the need to be cross platform.</p>
 
-<P>When SVG is understood by Word and OpenOffice (OpenDoc?), EMF will become
-unnecessary, but this can fill the void in the meantime.</p>
+<P>When SVG is understood by Word (OpenDoc nudge, nudge,
+say-no-more?), EMF will become unnecessary, but this can fill the void
+in the meantime.</p>
 
 <h1>Current Version</h1>
 
