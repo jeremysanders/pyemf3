@@ -5,29 +5,30 @@
 Pure Python bindings for an
 U{ECMA-234<http://www.ecma-international.org/publications/standards/Ecma-234.htm>}
 compliant vector graphics library.  ECMA-234 is the published
-interface for the Windows GDI used in the Microsoft windows
-environment and, more importantly, natively supported by the
+interface for Enhanced Metafiles (or EMFs), the file-based
+representation of the graphics device interface in the Microsoft
+windows environment and, more importantly, natively supported by the
 U{OpenOffice<http://www.openoffice.org>} suite of tools.
 
 This API follows most of the naming conventions of ECMA-234, and most
 of the parameter lists of methods are the same as their ECMA-234
 equivalents.  The primary difference is that pyemf has extended the
-API to be object-oriented based on the class L{EMF}.  So, in ECMA-234
-where the first argument is generally the device context, here in
+API to be object-oriented based on the class L{EMF}.  So, while in
+ECMA-234 the first argument is generally the device context, here in
 pyemf it is implicit in the class instance.
 
 ECMA-234 defines a lot of constants (mostly integers that are used as
 flags to various functions) that pyemf defines as module level
-variables.  So, rather than pollute your global namespace with a bunch
-of extra stuff, it is therefore recommended that you use C{import
-pyemf} rather than C{from pyemf import *}.
+variables.  So, rather than pollute your global namespace, it is
+recommended that you use C{import pyemf} rather than C{from pyemf
+import *}.
 
 Introduction
 ============
 
 To use pyemf in your programs, you L{instantiate<EMF.__init__>} an
-L{EMF} object, draw some stuff using the methods of L{EMF}, and save
-the file.  An example::
+L{EMF} object, draw some stuff using its methods, and save the file.
+An example::
 
   #!/usr/bin/env python
 
@@ -45,10 +46,10 @@ the file.  An example::
   emf.save("test1.emf")
 
 This small program creates a 8in x 6in EMF at 300 dots per inch, and
-draws a big X across the image.  This simple test is available as
-C{test1.py} in the C{examples} directory of the pyemf distribution.
-There are many other small test programs to demonstrate other features
-of the EMF class.
+draws two lines connecting the opposite corners.  This simple test is
+available as C{test1.py} in the C{examples} directory of the pyemf
+distribution.  There are many other small test programs to demonstrate
+other features of the EMF class.
 
 
 Naming Conventions in pyemf
@@ -143,16 +144,17 @@ seem to be suppored currently in OpenOffice.  So, reliably we can only
 use CreateSolidBrush and thus can only specify a fill color and not a
 fill pattern.
 
-Note that there is a stock object NULL_BRUSH if you want use a filled
-object primative but only want to use the outline.
+Note that there is a stock object NULL_BRUSH that doesn't fill, useful
+if you want to only draw an outline of a primitive that is normally
+filled.
 
 An interesting sidenote is that there is no direct support for
 gradients in EMF.  Examining some .emfs that do have gradients shows
 that Windows produces them using clipping regions and subdividing the
 object into areas of a single color an drawing slices of the
-individual color.  Getting clipping regions to work is the subject of
-a future release of pyemf, but they also don't seem to work in
-OpenOffice yet, so the urgency isn't there yet.
+individual color.  Better support for clipping regions is the subject
+of a future release of pyemf, but they also don't seem to work well in
+OpenOffice, so it hasn't been a high priority.
 
 
 Fonts
@@ -2044,8 +2046,8 @@ for name in dir(_EMR):
 
 class EMF:
     """
-The public API for EMF creation.  See L{pyemf} for an overview /
-tutorial; this page is for referencing.
+Reference page of the public API for enhanced metafile creation.  See
+L{pyemf} for an overview / mini tutorial.
 
 @group Creating Metafiles: __init__, load, save
 @group Drawing Parameters: GetStockObject, SelectObject, DeleteObject, CreatePen, CreateSolidBrush, CreateHatchBrush, SetBkColor, SetBkMode, SetPolyFillMode
