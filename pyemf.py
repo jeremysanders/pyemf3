@@ -9,9 +9,27 @@ interface for the Windows GDI used in the Microsoft windows
 environment and, more importantly, natively supported by the
 U{OpenOffice<http://www.openoffice.org>} suite of tools.
 
+This API follows most of the naming conventions of ECMA-234, and most
+of the parameter lists of methods are the same as their ECMA-234
+equivalents.  The primary difference is that pyemf has extended the
+API to be object-oriented based on the class L{EMF}.  So, in ECMA-234
+where the first argument is generally the device context, here in
+pyemf it is implicit in the class instance.
+
+ECMA-234 defines a lot of constants (mostly integers that are used as
+flags to various functions) that pyemf defines as module level
+variables.  So, rather than pollute your global namespace with a bunch
+of extra stuff, it is therefore recommended that you use C{import
+pyemf} rather than C{from pyemf import *}.
+
+The module level variables are listed on this page, but they are all
+referenced and explained in the L{EMF} methods that use them.  So,
+this page is only of limited value.  Surf on over to L{EMF} for the
+real details.
+
 
 @author: Rob McMullen
-@version: 2.0.0b1
+@version: 2.0.0
 
 
 """
@@ -28,7 +46,7 @@ import copy
 # principle is used here.  This is the only place where these values
 # are defined in the source distribution, and everything else that
 # needs this should grab it from here.
-__version__ = "2.0.0b1"
+__version__ = "2.0.0"
 __author__ = "Rob McMullen"
 __author_email__ = "robm@users.sourceforge.net"
 __url__ = "http://pyemf.sourceforge.net"
@@ -1827,7 +1845,129 @@ for name in dir(_EMR):
 class EMF:
     """
 
-User interface to EMF creation.
+Introduction
+============
+
+User interface to EMF creation.  To use pyemf in your programs, you
+instantiate an EMF object, draw some stuff using the methods of EMF,
+and save the file.  An example::
+
+  #!/usr/bin/env python
+
+  import pyemf
+
+  width=8.0
+  height=6.0
+  dpi=300
+
+  emf=pyemf.EMF(width,height,dpi)
+  thin=emf.CreatePen(pyemf.PS_SOLID,1,(0x01,0x02,0x03))
+  emf.SelectObject(thin)
+  emf.Polyline([(0,0),(width*dpi,height*dpi)])
+  emf.Polyline([(0,height*dpi),(width*dpi,0)])
+  emf.save("test1.emf")
+
+This small program creates a 8in x 6in EMF at 300 dots per inch, and
+draws a big X across the image.  This simple test is available as
+C{test1.py} in the C{examples} directory of the pyemf distribution.
+There are many other small test programs to demonstrate other features
+of the EMF class.
+
+Coordinate System
+=================
+
+Coordinates are addressed by integer pixels in a horizontal range
+(increasing to the right) from 0 to width*density, and vertically
+(from the top down) 0 to height*density.  Density is either dots per
+inch if werking in english units, or dots per millimeter if working in
+metric.
+
+Experimental Coordinate System
+------------------------------
+
+Note that there are four coordinate spaces used by GDI: world, page,
+device, and physical device.  World and page are the same, unless a
+world transform (L{SetWorldTransform}, L{ModifyWorldTransform}) is
+used.  Experimental support for device coordinates is available through
+L{SetMapMode} and the various Window and Viewport methods.  Device
+coordinates are referenced by physical dimensions corresponding to the
+mapping mode currently used.  [The methods work correctly and the API
+won't change, but I haven't made it a priority to reverse engineer the
+workings of this set of GDI functions.]
+
+
+Drawing Characteristics
+=======================
+
+GDI has a concept of the B{current object} for the each of the three
+drawing characterists: line style, fill style, and font.  Once a
+characteristic is made current using L{SelectObject}, it remains
+current until it is replaced by another call to SelectObject.  Note
+that a call to SelectObject only affects that characteristic, and not
+the other two, so changing the line style doesn't effect the fill
+style or the font.
+
+
+Colors
+------
+
+A quick note about color.  Colors in pyemf are specified one of three
+ways:
+
+  - (r,g,b) tuple, where each component is a integer between 0 and 255 inclusive.
+
+  - (r,g,b) tuple, where each component is a float between 0.0 and 1.0 inclusive.
+
+  - packed integer created by a call to L{RGB}
+
+
+Line Styles
+-----------
+
+Line styles are created by L{CreatePen} and specify the style, width,
+and color.
+
+
+Fill Styles
+-----------
+
+Polygon fill styles are created by L{CreateSolidBrush} and
+theoritically L{CreateHatchBrush}, although the latter doesn't seem to
+be suppored currently in OpenOffice.  So, reliably we can only use
+CreateSolidBrush and thus can only specify a fill color and not a fill
+pattern.
+
+An interesting sidenote is that there is no direct support for
+gradients in EMF.  Examining some .emfs that do have gradients shows
+that Windows produces them using clipping regions and subdividing the
+object into areas of a single color an drawing slices of the
+individual color.  Getting clipping regions to work is the subject of
+a future release of pyemf, but they also don't seem to work in
+OpenOffice yet, so the urgency isn't there yet.
+
+
+Fonts
+-----
+
+L{CreateFont} requires a large number of parameters, the most
+important being the height, the rotation, and the name.  Note that the
+height can either be specifed as a positive or negative integer, where
+negative means use that value as the average I{glyph} height and
+positive means use the value as the average I{cell} height.  Since a
+glyph is contained within a cell, the negative value will yield a
+slightly larger font when rendered on screen.
+
+Note that the two rotation values must specify the same angle.
+
+Also note that font color is not part of a L{SelectObject}
+characteristic.  It is specified using the separate method
+L{SetTextColor}.  L{SetBkMode} and L{SetBkColor} are supposed to work
+with text, but in my testing with OpenOffice it hasn't been
+consistant.  I tend to just C{SetBkMode(pyemf.TRANSPARENT)} and leave
+it at that.
+
+
+
 
 @group Creating Metafiles: __init__, load, save
 @group Drawing Parameters: GetStockObject, SelectObject, DeleteObject, CreatePen, CreateSolidBrush, CreateHatchBrush, SetBkColor, SetBkMode, SetPolyFillMode
@@ -1836,7 +1976,7 @@ User interface to EMF creation.
  PolyBezierTo, CloseFigure, FillPath, StrokePath, StrokeAndFillPath
 @group Text: CreateFont, SetTextAlign, SetTextColor, TextOut
 @group Coordinate System Transformation: SetWorldTransform, ModifyWorldTransform
-@group Viewport Manipulation - Experimental: SetMapMode, SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx, GetWindowOrgEx, SetViewportExtEx, ScaleViewportExtEx, GetViewportExtEx, SetWindowExtEx, ScaleWindowExtEx, GetWindowExtEx 
+@group **Experimental** -- Viewport Manipulation: SetMapMode, SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx, GetWindowOrgEx, SetViewportExtEx, ScaleViewportExtEx, GetViewportExtEx, SetWindowExtEx, ScaleWindowExtEx, GetWindowExtEx 
 
 """
 
@@ -2217,7 +2357,10 @@ B{Note:} Currently appears unsupported in OpenOffice.
     def SetBkColor(self,color):
         """
 
-Set the background color.
+Set the background color used for any transparent regions in fills or
+hatched brushes.
+
+B{Note:} Currently appears sporadically supported in OpenOffice.
 
 @param color: background L{color<RGB>}.
 @return: previous background L{color<RGB>}.
@@ -2233,11 +2376,15 @@ Set the background color.
     def SetBkMode(self,mode):
         """
 
-Set the background mode.
+Set the background mode for interaction between transparent areas in
+the region to be drawn and the existing background.
 
 The choices for mode are:
  - TRANSPARENT
  - OPAQUE
+
+B{Note:} Currently appears sporadically supported in OpenOffice.
+
 @param mode: background mode.
 @return: previous background mode.
 @rtype: int
@@ -3009,7 +3156,7 @@ Create a new font object. Presumably, when rendering the EMF the
 system tries to find a reasonable approximation to all the requested
 attributes.
 
-@param height:
+@param height: specified one of two ways:
  - if height>0: locate the font using the specified height as the typical cell height
  - if height<0: use the absolute value of the height as the typical glyph height.
 @param width: typical glyph width.  If zero, the typical aspect ratio of the font is used.
