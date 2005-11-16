@@ -1413,8 +1413,9 @@ class _EMR:
         emr_id=34
         emr_typedef=[('i','iRelative')]
         
-        def __init__(self):
+        def __init__(self,rel=-1):
             _EMR_UNKNOWN.__init__(self)
+            self.iRelative=rel
 
 
     class _SETWORLDTRANSFORM(_EMR_UNKNOWN):
@@ -3215,6 +3216,44 @@ bounding rectangle of the path as the clip area, not the path itself.
 
         """
         return self._append(_EMR._SELECTCLIPPATH(mode))
+
+    def SaveDC(self):
+        """
+
+Saves the current state of the graphics mode (such as line and fill
+styles, font, clipping path, drawing mode and any transformations) to
+a stack.  This state can be restored by L{RestoreDC}.
+
+B{Note:} Currently unsupported in OpenOffice -- it apparently uses the
+bounding rectangle of the path as the clip area, not the path itself.
+
+@return: value of the saved state.
+@rtype: int
+
+        """
+        return self._append(_EMR._SAVEDC())
+
+    def RestoreDC(self,stackid):
+        """
+
+Restores the state of the graphics mode to a stack.  The L{stackid}
+parameter is either a value returned by L{SaveDC}, or if negative, is
+the number of states relative to the top of the save stack.  For
+example, C{stackid == -1} is the most recently saved state.
+
+B{Note:} If the retrieved state is not at the top of the stack, any
+saved states above it are thrown away.
+
+B{Note:} Currently unsupported in OpenOffice -- it apparently uses the
+bounding rectangle of the path as the clip area, not the path itself.
+
+@param stackid: stack id number from L{SaveDC} or negative number for relative stack location
+@type stackid: int
+@return: nonzero for success
+@rtype: int
+
+        """
+        return self._append(_EMR._RESTOREDC(-1))
 
     def SetTextAlign(self,alignment):
         """
