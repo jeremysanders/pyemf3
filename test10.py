@@ -33,6 +33,7 @@ fontheight=48
 emf.SetTextColor((0x80,0x00,0x00))
 for face in fontlist:
 
+    emf.Polyline(((90,fonty-fontheight),(1200,fonty-fontheight)))
     emf.Polyline(((90,fonty-fontheight/2),(1200,fonty-fontheight/2)))
     emf.Polyline(((90,fonty),(1200,fonty)))
 
@@ -40,7 +41,6 @@ for face in fontlist:
                           pyemf.ANSI_CHARSET, pyemf.OUT_DEFAULT_PRECIS,
                           pyemf.CLIP_DEFAULT_PRECIS, pyemf.DEFAULT_QUALITY,
                           pyemf.DEFAULT_PITCH | pyemf.FF_DONTCARE, face);
-    emf.SetBkMode(pyemf.OPAQUE)
     emf.SelectObject( font );
     emf.TextOut( 100, fonty, face)
     
@@ -48,15 +48,13 @@ for face in fontlist:
                           pyemf.ANSI_CHARSET, pyemf.OUT_DEFAULT_PRECIS,
                           pyemf.CLIP_DEFAULT_PRECIS, pyemf.DEFAULT_QUALITY,
                           pyemf.DEFAULT_PITCH | pyemf.FF_DONTCARE, face);
-    emf.SetBkMode(pyemf.TRANSPARENT)
     emf.SelectObject( font );
     emf.TextOut(700, fonty, face)
 
     
     print "after %s Font" % face
-    fonty+=50;
+    fonty+=80;
 
-fonty+=100
 emf.TextOut(0,fonty,"All text should be on a green background")
 
 ret=emf.save("test10.emf")
