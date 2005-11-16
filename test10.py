@@ -29,22 +29,26 @@ emf.SelectObject(thin)
 fontlist = ["Arial","Times New Roman","Andale Mono","Trebuchet MS","Georgia","Verdana","Courier New","Helvetica"]
 
 fonty=200
+fontheight=48
 emf.SetTextColor((0x80,0x00,0x00))
 for face in fontlist:
 
+    emf.Polyline(((90,fonty-fontheight/2),(1200,fonty-fontheight/2)))
     emf.Polyline(((90,fonty),(1200,fonty)))
 
-    font = emf.CreateFont( 48, 0, 0, 0, pyemf.FW_BOLD, 0, 0, 0,
+    font = emf.CreateFont( fontheight, 0, 0, 0, pyemf.FW_BOLD, 0, 0, 0,
                           pyemf.ANSI_CHARSET, pyemf.OUT_DEFAULT_PRECIS,
                           pyemf.CLIP_DEFAULT_PRECIS, pyemf.DEFAULT_QUALITY,
                           pyemf.DEFAULT_PITCH | pyemf.FF_DONTCARE, face);
+    emf.SetBkMode(pyemf.OPAQUE)
     emf.SelectObject( font );
     emf.TextOut( 100, fonty, face)
     
-    font = emf.CreateFont( -48, 0, 0, 0, pyemf.FW_BOLD, 0, 0, 0,
+    font = emf.CreateFont( -fontheight, 0, 0, 0, pyemf.FW_BOLD, 0, 0, 0,
                           pyemf.ANSI_CHARSET, pyemf.OUT_DEFAULT_PRECIS,
                           pyemf.CLIP_DEFAULT_PRECIS, pyemf.DEFAULT_QUALITY,
                           pyemf.DEFAULT_PITCH | pyemf.FF_DONTCARE, face);
+    emf.SetBkMode(pyemf.TRANSPARENT)
     emf.SelectObject( font );
     emf.TextOut(700, fonty, face)
 
