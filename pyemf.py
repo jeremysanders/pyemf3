@@ -99,7 +99,7 @@ Drawing Characteristics
 =======================
 
 GDI has a concept of the B{current object} for the each of the three
-drawing characterists: line style, fill style, and font.  Once a
+drawing characteristics: line style, fill style, and font.  Once a
 characteristic is made current using
 L{SelectObject<EMF.SelectObject>}, it remains current until it is
 replaced by another call to SelectObject.  Note that a call to
@@ -131,7 +131,7 @@ Line styles are created by L{CreatePen<EMF.CreatePen>} and specify the
 style, width, and color.
 
 Note that there is a NULL_PEN stock object if you don't actually want
-to draw a line with a drawing primative.
+to draw a line with a drawing primitive.
 
 
 Fill Styles
@@ -140,7 +140,7 @@ Fill Styles
 Polygon fill styles are created by
 L{CreateSolidBrush<EMF.CreateSolidBrush>} and theoretically
 L{CreateHatchBrush<EMF.CreateHatchBrush>}, although the latter doesn't
-seem to be suppored currently in OpenOffice.  So, reliably we can only
+seem to be supported currently in OpenOffice.  So, reliably we can only
 use CreateSolidBrush and thus can only specify a fill color and not a
 fill pattern.
 
@@ -148,7 +148,7 @@ Note that there is a stock object NULL_BRUSH that doesn't fill, useful
 if you want to only draw an outline of a primitive that is normally
 filled.
 
-An interesting sidenote is that there is no direct support for
+An interesting side-note is that there is no direct support for
 gradients in EMF.  Examining some .emfs that do have gradients shows
 that Windows produces them using clipping regions and subdividing the
 object into areas of a single color an drawing slices of the
@@ -162,7 +162,7 @@ Fonts
 
 L{CreateFont<EMF.CreateFont>} requires a large number of parameters,
 the most important being the height, the rotation, and the name.  Note
-that the height can either be specifed as a positive or negative
+that the height can either be specified as a positive or negative
 integer, where negative means use that value as the average I{glyph}
 height and positive means use the value as the average I{cell} height.
 Since a glyph is contained within a cell, the negative value will
@@ -175,7 +175,7 @@ L{SelectObject<EMF.SelectObject>} characteristic.  It is specified
 using the separate method L{SetTextColor<EMF.SetTextColor>}.
 L{SetBkMode<EMF.SetBkMode>} and L{SetBkColor<EMF.SetBkColor>} are
 supposed to work with text, but in my testing with OpenOffice it hasn't been
-consistant.  I tend to just C{SetBkMode(pyemf.TRANSPARENT)} and leave
+consistent.  I tend to just C{SetBkMode(pyemf.TRANSPARENT)} and leave
 it at that.
 
 
@@ -236,7 +236,10 @@ paths seem to be supported and are transformed, but text is not
 
 """
 
-__extra_epydoc_fields__ = [('gdi', 'GDI Command', 'GDI Commands')]
+__extra_epydoc_fields__ = [
+                           ('gdi', 'GDI Command', 'GDI Commands'),
+                           ('oo', 'OpenOffice Support'),
+                          ]
 
 
 import os,sys,re
