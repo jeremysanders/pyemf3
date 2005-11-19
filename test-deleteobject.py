@@ -36,4 +36,5 @@ for i in range(16):
     emf.Polyline([(x1,y),(x2,y)])
 
 
-emf.save("test6.emf")
+ret=emf.save("test-deleteobject.emf")
+print "save returns %s" % str(ret)

@@ -57,5 +57,5 @@ for face in fontlist:
 
 emf.TextOut(0,fonty,"All text should be on a green background")
 
-ret=emf.save("test10.emf")
-
+ret=emf.save("test-fontbackground.emf")
+print "save returns %s" % str(ret)

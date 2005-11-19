@@ -61,6 +61,6 @@ path(emf,"StrokeAndFillPath",1600,800)
 emf.StrokeAndFillPath()
 
 
-ret=emf.save("test5.emf")
-print "SaveEMF returns %s" % str(ret)
+ret=emf.save("test-paths1.emf")
+print "save returns %s" % str(ret)
 

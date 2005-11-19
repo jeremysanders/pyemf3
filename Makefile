@@ -21,7 +21,7 @@ distdir := $(PACKAGE)-$(VERSION)
 top_distdir := $(distdir)
 
 DISTFILES = pyemf.py setup.py README LICENSE
-DISTFILE_TESTS = test[0-9]*.py
+DISTFILE_TESTS = test-*.py
 
 
 .SUFFIXES:      .html.in .pre.in .html

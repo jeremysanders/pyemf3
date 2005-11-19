@@ -70,6 +70,6 @@ emf.StrokeAndFillPath()
 
 
 
-ret=emf.save("test8.emf")
-print "SaveEMF returns %s" % str(ret)
+ret=emf.save("test-viewport-window-origin.emf")
+print "save returns %s" % str(ret)
 

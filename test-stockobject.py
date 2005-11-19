@@ -2,7 +2,7 @@
 
 import pyemf
 
-print "Test of GetStockObject and SetPixel"
+print "Test of GetStockObject"
 
 width=8
 height=6
@@ -30,12 +30,6 @@ points=[(200,200),(300,400),(100,400)]
 emf.Polygon(points);
 print "after Polygon"
 
-for x in range(150,500):
-    y=x/2
-    emf.SetPixel(x,y,(0x80,x%256,0x90))
-print "after SetPixel"
-
-
-ret=emf.save("test3.emf")
-print "SaveEMF returns %d" % ret
+ret=emf.save("test-stockobject.emf")
+print "save returns %d" % ret
 

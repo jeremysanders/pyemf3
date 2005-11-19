@@ -95,6 +95,6 @@ for face in fontlist:
     print "after %s Font" % face
     fonty+=25;
 
-ret=emf.save("test2.emf")
-print "SaveEMF returns %s" % str(ret)
+ret=emf.save("test-drawing1.emf")
+print "save returns %s" % str(ret)
 

@@ -100,7 +100,7 @@ EXAMPLES
 Creating an EMF
 ---------------
 
-Here's a simple program (available as test1.py in the distribution)
+Here's a simple program (available as test-1.py in the distribution)
 that connects opposite corners of an 8in by 6in rectangle with lines:
 
 #!/usr/bin/env python

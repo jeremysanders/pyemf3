@@ -4,11 +4,9 @@ import pyemf
 
 from math import radians,cos,sin
 
-print "Test of clip paths."
+print "Test of world transformations."
 
-def clippath(emf,text,x,y,size=300):
-    emf.TextOut(x+40,y,text);
-    
+def path(emf,text,x,y,size=300):
     emf.BeginPath()
     emf.MoveTo(x,y)
     emf.LineTo(x+100,y+300)
@@ -22,12 +20,13 @@ def clippath(emf,text,x,y,size=300):
     emf.CloseFigure()
     emf.EndPath()
 
-    emf.SelectClipPath()
+    emf.StrokeAndFillPath()
+    emf.TextOut(x,y,text);
     
 
 width=6
 height=4
-dpi=150
+dpi=300
 pointstopixels=dpi/72.0
 
 emf=pyemf.EMF(width,height,dpi,verbose=False)
@@ -40,7 +39,7 @@ emf.SetBkMode(pyemf.TRANSPARENT)
 # set baseline for text to be top left corner
 emf.SetTextAlign(pyemf.TA_TOP|pyemf.TA_LEFT) 
 emf.SetTextColor((0,0,0))
-font = emf.CreateFont( -18, 0, 0, 0, pyemf.FW_NORMAL, 0, 0, 0,
+font = emf.CreateFont( -50, 0, 0, 0, pyemf.FW_NORMAL, 0, 0, 0,
                        pyemf.ANSI_CHARSET, pyemf.OUT_TT_PRECIS,
                        pyemf.CLIP_TT_ALWAYS, pyemf.PROOF_QUALITY,
                        pyemf.DEFAULT_PITCH | pyemf.FF_DONTCARE,
@@ -48,35 +47,46 @@ font = emf.CreateFont( -18, 0, 0, 0, pyemf.FW_NORMAL, 0, 0, 0,
 
 emf.SelectObject(font)
 
+dx=50
+dy=50
 dotted=emf.CreatePen(pyemf.PS_DOT,1,(0x02,0x03,0x04))
+emf.SelectObject(dotted)
+emf.Polyline([(dx,0),(dx,dy),(0,dy)])
 emf.SelectObject(dashed)
 
-id=emf.SaveDC()
 
-clippath(emf,"Clip path:",0,0,300)
-
-for x in range(0,width*dpi,10):
-    emf.Polyline([(0,0),(x,height*dpi)])
-
-for y in range(height*dpi,0,-10):
-    emf.Polyline([(0,0),(width*dpi,y)])
-
-
-smallfont = emf.CreateFont( -12, 0, 0, 0, pyemf.FW_NORMAL, 0, 0, 0,
-                       pyemf.ANSI_CHARSET, pyemf.OUT_TT_PRECIS,
-                       pyemf.CLIP_TT_ALWAYS, pyemf.PROOF_QUALITY,
-                       pyemf.DEFAULT_PITCH | pyemf.FF_DONTCARE,
-                       "Helvetica" )
-
-emf.SelectObject(smallfont)
-emf.TextOut(100,300,"This line is drawn while the clipping region is active and should be clipped by the clipping region");
-
-emf.RestoreDC(-1)
-emf.TextOut(0,200,"This line is drawn after the RestoreDC() and should be bigger and not be clipped by the clipping region");
-emf.SelectObject(smallfont)
-emf.TextOut(0,400,"This line is drawn after the RestoreDC(), should be smaller, and should not be clipped by the clipping region");
+emf.SetWorldTransform(dx=dx,dy=dy)
+path(emf,"translate (%d,%d) loc: 0,0" % (dx,dy),0,0,300)
 
 
 
-ret=emf.save("test11.emf")
+dx=500
+dy=800
+emf.ModifyWorldTransform(pyemf.MWT_IDENTITY)
+emf.SelectObject(dotted)
+emf.Polyline([(dx,0),(dx,dy),(0,dy)])
+emf.SelectObject(dashed)
 
+d=45
+angle=radians(d)
+emf.SetWorldTransform(cos(angle),-sin(angle),sin(angle),cos(angle),dx,dy)
+path(emf,"rotate %d deg, translate (%d,%d) loc: 0,0" % (d,dx,dy),0,0,300)
+
+
+
+
+dx=1000
+dy=1000
+# reset broken transform
+emf.SetWorldTransform()
+emf.SelectObject(dotted)
+emf.Polyline([(dx,0),(dx,dy),(0,dy)])
+emf.SelectObject(dashed)
+
+d=80
+angle=radians(d)
+emf.ModifyWorldTransform(pyemf.MWT_RIGHTMULTIPLY,cos(angle),-sin(angle),sin(angle),cos(angle),dx,dy)
+path(emf,"rotate %d deg, translate (%d,%d) loc: 0,0" % (d,dx,dy),0,0,300)
+
+
+ret=emf.save("test-worldtransform1.emf")

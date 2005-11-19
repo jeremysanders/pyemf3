@@ -30,6 +30,6 @@ emf.Pie(x,y,x+size,y+size,x,y,x,y+size)
 print "after Pie"
 
 
-ret=emf.save("test4.emf")
-print "SaveEMF returns %s" % str(ret)
+ret=emf.save("test-arc-chord-pie.emf")
+print "save returns %s" % str(ret)
 

@@ -43,11 +43,11 @@ An example::
   emf.SelectObject(thin)
   emf.Polyline([(0,0),(width*dpi,height*dpi)])
   emf.Polyline([(0,height*dpi),(width*dpi,0)])
-  emf.save("test1.emf")
+  emf.save("test-1.emf")
 
 This small program creates a 8in x 6in EMF at 300 dots per inch, and
 draws two lines connecting the opposite corners.  This simple test is
-available as C{test1.py} in the C{examples} directory of the pyemf
+available as C{test-1.py} in the C{examples} directory of the pyemf
 distribution.  There are many other small test programs to demonstrate
 other features of the EMF class.
 
