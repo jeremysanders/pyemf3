@@ -231,7 +231,7 @@ paths seem to be supported and are transformed, but text is not
 
 
 @author: Rob McMullen
-@version: 2.0.0
+@version: 2.0.0b1
 
 
 """
@@ -251,7 +251,7 @@ import copy
 # principle is used here.  This is the only place where these values
 # are defined in the source distribution, and everything else that
 # needs this should grab it from here.
-__version__ = "2.0.0"
+__version__ = "2.0.0b1"
 __author__ = "Rob McMullen"
 __author_email__ = "robm@users.sourceforge.net"
 __url__ = "http://pyemf.sourceforge.net"
