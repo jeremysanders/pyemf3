@@ -2057,9 +2057,10 @@ L{pyemf} for an overview / mini tutorial.
 @group Drawing Parameters: GetStockObject, SelectObject, DeleteObject, CreatePen, CreateSolidBrush, CreateHatchBrush, SetBkColor, SetBkMode, SetPolyFillMode
 @group Drawing Primitives: SetPixel, Polyline, Polygon, Rectangle, RoundRect, Ellipse, Arc, Chord, Pie, PolyBezier
 @group Path Primatives: BeginPath, EndPath, MoveTo, LineTo, PolylineTo, ArcTo,
- PolyBezierTo, CloseFigure, FillPath, StrokePath, StrokeAndFillPath, SelectClipPath
+ PolyBezierTo, CloseFigure, FillPath, StrokePath, StrokeAndFillPath
+@group Clipping: SelectClipPath
 @group Text: CreateFont, SetTextAlign, SetTextColor, TextOut
-@group Coordinate System Transformation: SetWorldTransform, ModifyWorldTransform
+@group Coordinate System Transformation: SaveDC, RestoreDC, SetWorldTransform, ModifyWorldTransform
 @group **Experimental** -- Viewport Manipulation: SetMapMode, SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx, GetWindowOrgEx, SetViewportExtEx, ScaleViewportExtEx, GetViewportExtEx, SetWindowExtEx, ScaleWindowExtEx, GetWindowExtEx 
 
 """
@@ -2718,7 +2719,7 @@ Get the dimensions of the window in logical units (integer numbers of pixels).
         return old
 
 
-    def SetWorldTransform(self,m11,m12,m21,m22,dx,dy):
+    def SetWorldTransform(self,m11=1.0,m12=0.0,m21=0.0,m22=1.0,dx=0.0,dy=0.0):
         """
 Set the world coordinate to logical coordinate linear transform for
 subsequent operations.  With this matrix operation, you can translate,
