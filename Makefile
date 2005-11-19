@@ -70,6 +70,8 @@ dist: distdir
 	$(TAR) cvf $(distdir).tar $(distdir)
 	$(GZIP) $(distdir).tar
 	-rm -rf $(distdir)
+	-mkdir archive
+	cp $(distdir).tar.gz archive
 
 distdir: $(DISTFILES)
 	-rm -rf $(distdir)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import os,sys,re
+import os,sys,re,os.path
 from datetime import date
 from optparse import OptionParser
 from Cheetah.Template import Template
@@ -14,12 +14,28 @@ namespace={
     'author_email':pyemf.__author_email__,
     'url':pyemf.__url__,
     'description':pyemf.__description__,
-    'release_date':'... er, soon', # should stat the file instead
+    'release_date':None, # should stat the file instead
     'today':date.today().strftime("%d %B %Y"),
     'year':date.today().strftime("%Y"),
+    'yearstart':'2005',
     'htmlBody':'',
     'preBody':'',
     }
+
+filename=namespace['prog']+'-'+namespace['version']+'.tar.gz'
+if os.path.exists(filename):
+    namespace['release_date']=date.fromtimestamp(os.path.getmtime(filename)).strftime("%d %B %Y")
+elif os.path.exists('archive/'+filename):
+    namespace['release_date']=date.fromtimestamp(os.path.getmtime('archive/'+filename)).strftime("%d %B %Y")
+else:
+    namespace['release_date']='... er, soon'
+
+if int(namespace['yearstart'])<int(namespace['year']):
+    namespace['yearrange']=namespace['yearstart']+'-'+namespace['year']
+else:
+    namespace['yearrange']=namespace['year']
+
+
 
 def store(keyword,infile):
     fh=open(infile)

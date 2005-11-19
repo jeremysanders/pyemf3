@@ -31,8 +31,8 @@ But, it's harder to distribute a SWIG module that a pure python one,
 and I also wanted to support a few more features than were available
 in libEMF.</p>
 
-<p>Plus, I wanted to acknowledge all my time spent debugging that
-blasted thing, so I'm not wiping out the existence of pyemf 1.0.</p>
+<p>Even though this was never released, I'm not wiping out the
+existence of pyemf 1.0.  See below.</p>
 
 </dd>
 

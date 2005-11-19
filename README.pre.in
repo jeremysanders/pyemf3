@@ -1,6 +1,6 @@
 $prog $version
 $release_date
-Copyright (c) $year $author ($author_email)
+Copyright (c) $yearrange $author ($author_email)
 
 $url
 
@@ -18,10 +18,12 @@ OpenOffice suite of tools.
 http://www.ecma-international.org/publications/standards/Ecma-234.htm
 
 
+
 PREREQUISITES
 =============
 
 python (tested under 2.2, 2.3 and 2.4)
+
 
 
 QUICK INSTALL
@@ -54,11 +56,14 @@ Supported
     BeginPath, EndPath, MoveTo, LineTo, PolylineTo, ArcTo,
     PolyBezierTo, CloseFigure, FillPath, StrokePath, StrokeAndFillPath
 
+  Clipping:
+    SelectClipPath
+
   Text:
     CreateFont, SetTextAlign, SetTextColor, TextOut
 
   Coordinate system transformation:
-    SetWorldTransform, ModifyWorldTransform
+    SaveDC, RestoreDC, SetWorldTransform, ModifyWorldTransform
 
 Experimental
 ------------
@@ -75,6 +80,17 @@ Unsupported
   Bitmaps
   Text metrics
 
+
+
+DOCUMENTATION
+=============
+
+The most current documentation is always available on the web at
+$url/api/index.html
+
+Or, in the source distribution, the directory website/api/ contains a
+copy of the api documentation for version $version.  Simply point your
+web browser at the index.html within that directory.
 
 
 
@@ -96,7 +112,7 @@ height=6
 dpi=300
 
 emf=pyemf.EMF(width,height,dpi)
-thin=emf.CreatePen(PS_SOLID,1,(0x00,0x00,0x00))
+thin=emf.CreatePen(pyemf.PS_SOLID,1,(0x01,0x02,0x03))
 emf.SelectObject(thin)
 emf.Polyline([(0,0),(width*dpi,height*dpi)])
 emf.Polyline([(0,height*dpi),(width*dpi,0)])
