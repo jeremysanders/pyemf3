@@ -16,7 +16,7 @@ information is sometimes used to indicate sub-releases. These are
 change), "b1,b2,...,bN" (for beta releases, which only fix bugs)
 </div>
 
-<P>Obviously, I'm not starting at major number 0.  See below.
+<p>Obviously, I'm not starting at major number 0.  See below.
 
 
 <h1>History</h1>
@@ -31,6 +31,9 @@ But, it's harder to distribute a SWIG module that a pure python one,
 and I also wanted to support a few more features than were available
 in libEMF.</p>
 
+<p>Plus, I wanted to acknowledge all my time spent debugging that
+blasted thing, so I'm not wiping out the existence of pyemf 1.0.</p>
+
 </dd>
 
 
@@ -38,12 +41,12 @@ in libEMF.</p>
 <dt>2.0 - <emph>Currently in development at version $version</emph></dt>
 <dd>
 
-<P>This is the current version.  I had to change major numbers because
+<p>This is the current version.  I had to change major numbers because
 the API changed from version 1.*.  At the time, I wasn't sure how long
 it would take me to code up version 2.* and was thinking that I might
-release version 1 in the interrim.</p>
+release version 1 in the interim.</p>
 
-<P>But, I was able to code up version 2.0.0 in a reasonable time,
+<p>But, I was able to code up version 2.0.0 in a reasonable time,
 but by then I was far enough along in my thinking that I just left the
 version numbers alone.  A bit strange to release a version 2.* before
 a 1.* became public, but given the amount of time I invested in
@@ -55,7 +58,7 @@ give a nod to myself for some good effort.</p>
 <dt>2.1 - <emph>Future plans</emph></dt>
 <dd>
 
-<P>Things I'd like to support:</p>
+<p>Things I'd like to support:</p>
 
 <ul>
 <li>understand the viewport origin and extent commands</li>
@@ -64,13 +67,13 @@ give a nod to myself for some good effort.</p>
 
 </dd>
 
-<P>&nbsp;</p>
+<p>&nbsp;</p>
 
 
 <dt>2.x - <emph>Way future plans</emph></dt>
 <dd>
 
-<P>Somewhere off in the distance...</p>
+<p>Somewhere off in the distance...</p>
 
 <ul>
 <li>Font metrics.   Maybe.</li>
@@ -83,16 +86,28 @@ give a nod to myself for some good effort.</p>
 <h1>Known Issues</h1>
 
 <dl>
-<dt>Window and Viewport extents are not well understoood</dt>
+<dt>Methods that should return coordinates or colors not working</dt>
 <dd>
 
-<P>I'm still trying to understand the various permutations of units
+<p>According to the ECMA spec, some Set methods should return the
+previous color or location.  This requires that the internal
+representation of the device context keep track of everything, and in
+$version that isn't quite happening yet.  Will be fixed before
+2.0.0.</p>
+
+</dd>
+
+<dl>
+<dt>Window and Viewport extents are not well understood</dt>
+<dd>
+
+<p>I'm still trying to understand the various permutations of units
 set by SetMapMode and how they effect the viewport and window extents.
 So, all the functions [Set|Get|Scale][Viewport|Window][Org|Ext]Ex
-exist in pyemf, but they aren't guarenteed to do the right thing,
+exist in pyemf, but they aren't guaranteed to do the right thing,
 unless you the user happen to know what the right thing is.</p>
 
-<P>I certainly don't know what the right thing is yet in all cases.  The
+<p>I certainly don't know what the right thing is yet in all cases.  The
 ECMA spec is unclear, and the Microsoft docs are fuzzy at best.</p>
 
 </dd>
@@ -100,7 +115,7 @@ ECMA spec is unclear, and the Microsoft docs are fuzzy at best.</p>
 <dt>Bitmap functions don't exist</dt>
 <dd>
 
-<P>Since I wanted to support the vector graphics capabilities, bitmap
+<p>Since I wanted to support the vector graphics capabilities, bitmap
 support wasn't a high priority to me.  Patches welcome, however.</p>
 
 </dd>
@@ -108,35 +123,35 @@ support wasn't a high priority to me.  Patches welcome, however.</p>
 <dt>Text metrics functions don't exist</dt>
 <dd>
 
-<P>A full GDI implementation would include font metrics such that fine
+<p>A full GDI implementation would include font metrics such that fine
 grained control over glyph placement is available.  To really do text
 extents properly, a complete font metrics package would need to be
 added.  This requires a module that could link to something like
 freetype.  There is a freetype module included in matplotlib that I
 may look at for some future release, and in fact for my matplotlib
 modifications, I've used the freetype module with a bit of hackery to
-be able to place text strings in relation to one another.</P>
+be able to place text strings in relation to one another.</p>
 
-<P>So, only the basics of font support are included.  It seems to be a
+<p>So, only the basics of font support are included.  It seems to be a
 bit renderer dependent as to how the fonts will be chosen based on the
 specifications to CreateFontA.  For example, what happens when you
 request a font that isn't available on your target computer?  I
 suppose this problem isn't limited to pyemf, but to any EMF that uses
-fonts.</P>
+fonts.</p>
 
-<P>Comparing the output on PowerPoint vs OpenOffice Impress seems to show
+<p>Comparing the output on PowerPoint vs OpenOffice Impress seems to show
 that fonts render about the same, but in terms of precisely placing
 strings of text in relation to other strings (e.g. knowing where a
 string ends so you could append a string right after that), it seems
 that we're a bit out of luck for the moment unless we can integrate it
-with some external library for metrics.</P>
+with some external library for metrics.</p>
 
-<P>I'm still needing to do more research before I add font extents to
+<p>I'm still needing to do more research before I add font extents to
 pyemf.  If you're curious and want to figure out how this stuff works
 in GDI, the prime suspect is the function GetTextExtentPoint32A(),
 which should measure the width and height of a string.  But also of
 interest are how CreateFont and CreateFontIndirect and how they
-specify fonts.</P>
+specify fonts.</p>
 
 </dd>
 </dl>

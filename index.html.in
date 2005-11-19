@@ -30,10 +30,10 @@ and is usable on Windows, Linux/Unix, and MacOS.</p>
 graphics, and to be able to email those reports to people who use
 Windows.  The users also needed they ability to cut out the graphics
 and paste them into powerpoint slides.  My one real requirement was
-vector graphics so that the resuling powerpoint wouldn't look nasty
+vector graphics so that the resulting powerpoint wouldn't look nasty
 when the graphics were resized.</p>
 
-<P>Initially thought about HTML, but it's inconvienent emailing a zip
+<p>Initially thought about HTML, but it's inconvenient emailing a zip
 file full of multiple files.  There is a format called "MHTML" that
 allows images and text to be included in a single file, but it is
 non-standard.  I then thought about PDF and EPS, and went down that
@@ -43,7 +43,7 @@ PDF (or at least Adobe Reader on Windows) has the restriction that you
 can't copy EPS figures from within a PDF and paste them anywhere.  So,
 that turned out not to be a workable solution.</p>
 
-<P>I had to build $prog because this is the only way I could automate document generation via Python that:</p>
+<p>I had to build $prog because this is the only way I could automate document generation via Python that:</p>
 
 <ol>
 <li>uses vector (scalable) graphics</li>
@@ -74,7 +74,7 @@ now generate RTF documents that include snazzy scientific plots.
 These documents are modifiable by both Microsoft Word and OpenOffice
 Writer, satisfying the need to be cross platform.</p>
 
-<P>When SVG is understood by Word (OpenDoc nudge, nudge,
+<p>When SVG is understood by Word (OpenDoc nudge, nudge,
 say-no-more?), EMF will become unnecessary, but this can fill the void
 in the meantime.</p>
 
@@ -84,8 +84,8 @@ in the meantime.</p>
 href="http://sourceforge.net/project/showfiles.php?group_id=148144">download
 page</a> </p>
 
-
-<h1>License</h1>
+<p>See the <a href="roadmap.html">roadmap</a> for known issues and
+future directions.</p>
 
 <p>
 $prog is licensed under the <a href="http://www.gnu.org/copyleft/lesser.html">LGPL</a>

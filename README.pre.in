@@ -50,7 +50,7 @@ Supported
     SetPixel, Polyline, Polygon, Rectangle, RoundRect, Ellipse, Arc,
     Chord, Pie, PolyBezier
 
-  Path primatives:
+  Path primitives:
     BeginPath, EndPath, MoveTo, LineTo, PolylineTo, ArcTo,
     PolyBezierTo, CloseFigure, FillPath, StrokePath, StrokeAndFillPath
 
