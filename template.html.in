@@ -40,8 +40,8 @@ $preBody
 		</div>
 		<div id="footer">
 			<div id="signatureLine">
-				<div id="signatureAuthor">Author: Rob McMullen &lt;robm at users.sourceforge.net&gt;</div>
-				<div id="signatureDate">Last updated: 12 November 2005</div>
+				<div id="signatureAuthor">Author: $author &lt;robm at users.sourceforge.net&gt;</div>
+				<div id="signatureDate">Last updated: $today</div>
 			</div>
 			<div id="signatureLogo">
 				<a href="http://sourceforge.net"><img src="http://sourceforge.net/sflogo.php?group_id=148144" width="88" height="31" border="0" alt="SourceForge Logo" /></a>
