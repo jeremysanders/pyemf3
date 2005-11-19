@@ -70,7 +70,7 @@ give a nod to myself for some good effort.</p>
 <p>&nbsp;</p>
 
 
-<dt>2.x - <emph>Way future plans</emph></dt>
+<dt>8.x - <emph>Way future plans</emph></dt>
 <dd>
 
 <p>Somewhere off in the distance...</p>
@@ -84,6 +84,14 @@ give a nod to myself for some good effort.</p>
 
 
 <h1>Known Issues</h1>
+
+<dl>
+<dt>PolyPolyline and PolyPolygon missing</dt>
+<dd>
+
+<p class="ontarget">Target: fix before 2.0.0 final</p>
+
+</dd>
 
 <dl>
 <dt>Methods that should return coordinates or colors not working</dt>
