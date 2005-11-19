@@ -11,7 +11,7 @@ TAR = tar
 GZIP = gzip -f
 
 PACKAGE := pyemf
-VERSION := $(shell grep __version__ pyemf.py|head -n1|cut -d \" -f 2)
+VERSION := $(shell grep __version__ $(PACKAGE).py|head -n1|cut -d \" -f 2)
 
 srcdir = .
 top_srcdir = .
@@ -20,7 +20,7 @@ top_builddir = .
 distdir := $(PACKAGE)-$(VERSION)
 top_distdir := $(distdir)
 
-DISTFILES = pyemf.py setup.py README LICENSE
+DISTFILES = pyemf.py setup.py README LICENSE PyRTF-0.45-EMF-patch.diff matplotlib-0.85-EMF-patch.diff
 DISTFILE_TESTS = test-*.py
 
 
@@ -70,7 +70,7 @@ dist: distdir
 	$(TAR) cvf $(distdir).tar $(distdir)
 	$(GZIP) $(distdir).tar
 	-rm -rf $(distdir)
-	-mkdir archive
+	-mkdir -p archive
 	cp $(distdir).tar.gz archive
 
 distdir: $(DISTFILES)

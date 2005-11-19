@@ -31,7 +31,48 @@ QUICK INSTALL
 
 python setup.py install
 
-Yep, that's pretty much it.
+Yep, that's pretty much it, unless you have unpatched versions of
+PyRTF or matplotlib.
+
+
+Patch for PyRTF
+---------------
+
+If you have an unpatched version of PyRTF, you may apply the included
+patch to provide EMF support.  You can either apply it to the source
+distribution, or to the site libraries (where you might have to be
+root).
+
+$ cd PyRTF-0.45/PyRTF
+$ patch -p0 < PyRTF-0.45-EMF-patch.diff
+$ cd ..
+$ python setup.py install
+
+or
+
+$ cd [path to python site-packages]/PyRTF
+$ patch -p0 < PyRTF-0.45-EMF-patch.diff
+
+
+Patch for matplotlib
+--------------------
+
+The included patch works against matplotlib 0.84 or 0.85; against
+earlier versions you may need to edit matplotlib/__init__.py to add
+'EMF':1 to the _knownBackends dict and edit
+matplotlib/backends/__init__.py to add 'EMF' to the non_interactive_bk
+list.  matplotlib/backends/backend_emf.py should be added in all
+cases.
+
+$ cd matplotlib-0.85/lib
+$ patch -p0 < matplotlib-0.85-EMF-patch.diff
+$ python setup.py install
+
+or
+
+$ cd [path to python site-packages]
+$ patch -p0 < matplotlib-0.85-EMF-patch.diff
+
 
 
 
@@ -116,7 +157,7 @@ thin=emf.CreatePen(pyemf.PS_SOLID,1,(0x01,0x02,0x03))
 emf.SelectObject(thin)
 emf.Polyline([(0,0),(width*dpi,height*dpi)])
 emf.Polyline([(0,height*dpi),(width*dpi,0)])
-emf.save("test1.emf")
+emf.save("test-1.emf")
 
 
 Examining an EMF
@@ -125,7 +166,7 @@ Examining an EMF
 pyemf, when run as a standalone program, has the ability to read an
 EMF and print out the contents.  Run:
 
-$ pyemf.py -v test1.emf
+$ pyemf.py -v test-1.emf
 
 and it will print out a text summary of all the metafile records in
 the file.
@@ -139,10 +180,10 @@ source distribution.  After installing the pyemf library, you should
 be able to run them like this:
 
 $ cd examples
-$ python test5.py
+$ python test-drawing1.py
 
-and examine the output file 'test5.emf' by loading it in OpenOffice
-Impress.
+and examine the output file 'test-drawing1.emf' by loading it in
+OpenOffice Impress.
 
 
 
