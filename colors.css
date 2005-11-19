@@ -39,3 +39,17 @@ body {
   border-color: #97ced5;
 }
 
+.ontarget { 
+  background: #fff;
+  border-color: #0f0;
+}
+
+.plannedtarget { 
+  background: #fff;
+  border-color: #ff0;
+}
+
+.maybetarget { 
+  background: #fff;
+  border-color: #f00;
+}

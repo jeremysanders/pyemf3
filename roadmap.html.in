@@ -89,17 +89,32 @@ give a nod to myself for some good effort.</p>
 <dt>Methods that should return coordinates or colors not working</dt>
 <dd>
 
+<p class="ontarget">Target: fix before 2.0.0 final</p>
+
 <p>According to the ECMA spec, some Set methods should return the
 previous color or location.  This requires that the internal
 representation of the device context keep track of everything, and in
-$version that isn't quite happening yet.  Will be fixed before
-2.0.0.</p>
+$version that isn't quite happening yet.</p>
+
+</dd>
+
+<dl>
+<dt>SaveDC/RestoreDC stack not maintained</dt>
+<dd>
+
+<p class="ontarget">Target: fix before 2.0.0 final</p>
+
+<p>SaveDC may be called multiple times, so the device context
+parameters should be saved on a stack so that return values for
+functions will be correct.</p>
 
 </dd>
 
 <dl>
 <dt>Window and Viewport extents are not well understood</dt>
 <dd>
+
+<p class="plannedtarget">Target: fix in 2.1?</p>
 
 <p>I'm still trying to understand the various permutations of units
 set by SetMapMode and how they effect the viewport and window extents.
@@ -115,6 +130,8 @@ ECMA spec is unclear, and the Microsoft docs are fuzzy at best.</p>
 <dt>Bitmap functions don't exist</dt>
 <dd>
 
+<p class="maybetarget">Target: fix sometime before the sun burns out?</p>
+
 <p>Since I wanted to support the vector graphics capabilities, bitmap
 support wasn't a high priority to me.  Patches welcome, however.</p>
 
@@ -122,6 +139,8 @@ support wasn't a high priority to me.  Patches welcome, however.</p>
 
 <dt>Text metrics functions don't exist</dt>
 <dd>
+
+<p class="maybetarget">Target: fix after the sun burns out?</p>
 
 <p>A full GDI implementation would include font metrics such that fine
 grained control over glyph placement is available.  To really do text

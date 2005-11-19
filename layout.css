@@ -106,3 +106,28 @@ a:link, a:visited, a:hover, a:active{
   margin: 0 1em;
   overflow: visible;
 }
+
+.ontarget { 
+  border-width: 1px;
+  border-style: solid;
+  line-height: 1.1em;
+
+  padding: .2em;
+}
+
+.plannedtarget { 
+  border-width: 1px;
+  border-style: solid;
+  line-height: 1.1em;
+
+  padding: .2em;
+}
+
+.maybetarget { 
+  border-width: 1px;
+  border-style: solid;
+  line-height: 1.1em;
+
+  padding: .2em;
+}
+
