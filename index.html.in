@@ -48,7 +48,7 @@ that turned out not to be a workable solution.</p>
 <ol>
 <li>uses vector (scalable) graphics</li>
 <li>allows bundling of multiple graphics files and text into a single file (via PyRTF)</li>
-<li>was cross platform (I had to support the Windows world)</li>
+<li>was cross platform (I run Linux but had to support the Windows world)</li>
 </ol>
 
 
@@ -69,10 +69,10 @@ a few features left out of libEMF that I can now add in without
 waiting for them to be added to libEMF.</p>
 
 <p>I've submitted patches to the maintainer of PyRTF and shortly will
-to <a href="http://matplotlib.sourceforge.net/">Matplotlib</a>, I can
-now generate RTF documents that include snazzy scientific plots.
-These documents are modifiable by both Microsoft Word and OpenOffice
-Writer, satisfying the need to be cross platform.</p>
+to Matplotlib, I can now generate RTF documents that include snazzy
+scientific plots.  These documents are modifiable by both Microsoft
+Word and OpenOffice Writer, satisfying the need to be cross
+platform.</p>
 
 <p>When SVG is understood by Word (OpenDoc nudge, nudge,
 say-no-more?), EMF will become unnecessary, but this can fill the void
