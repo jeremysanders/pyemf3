@@ -15,6 +15,11 @@ if sys.version < '2.2.3':
     DistributionMetadata.classifiers = None
     DistributionMetadata.download_url = None
 
+# ignore a warning about large int constants in Python 2.3.*
+if sys.version >= '2.3' and sys.version < '2.4':
+    import warnings
+    warnings.filterwarnings('ignore', "hex/oct constants", FutureWarning)
+
 # python looks in current directory first, so we'll be sure to get our
 # freshly unpacked version here.
 import pyemf
