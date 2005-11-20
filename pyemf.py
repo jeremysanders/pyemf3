@@ -258,7 +258,7 @@ __author_email__ = "robm@users.sourceforge.net"
 __url__ = "http://pyemf.sourceforge.net"
 __download_url__ = "http://sourceforge.net/project/showfiles.php?group_id=148144"
 __description__ = "Pure Python Enhanced Metafile Library"
-__keywords__ = "graphics scalable vector image cliport emf"
+__keywords__ = "graphics, scalable, vector, image, clipart, emf"
 __license__ = "LGPL"
 
 
