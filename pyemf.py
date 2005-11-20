@@ -2,14 +2,15 @@
 
 """
 
-Pure Python bindings for an
-U{ECMA-234<http://www.ecma-international.org/publications/standards/Ecma-234.htm>}
-compliant vector graphics library.  ECMA-234 is the published
-interface for Enhanced Metafiles (or EMFs), the file-based
-representation of the graphics device interface in the Microsoft
-windows environment and, more importantly, natively supported by the
-U{OpenOffice<http://www.openoffice.org>} suite of tools.
+pyemf is a pure python module that provides a cross-platform ability
+to generate enhanced metafiles (.emf files), a vector graphics format
+defined by the ECMA-234 standard.  Enhanced metafiles are a natively
+supported image and scalable clip-art format in the OpenOffice suite
+of tools and in Windows applications.
 
+U{ECMA-234<http://www.ecma-international.org/publications/standards/Ecma-234.htm>}
+is the published interface for enhanced metafiles, which is also a
+file-based representation of the Windows graphics device interface.
 This API follows most of the naming conventions of ECMA-234, and most
 of the parameter lists of methods are the same as their ECMA-234
 equivalents.  The primary difference is that pyemf has extended the
@@ -251,11 +252,15 @@ import copy
 # principle is used here.  This is the only place where these values
 # are defined in the source distribution, and everything else that
 # needs this should grab it from here.
-__version__ = "2.0.0b1"
+__version__ = "2.0.0b2"
 __author__ = "Rob McMullen"
 __author_email__ = "robm@users.sourceforge.net"
 __url__ = "http://pyemf.sourceforge.net"
+__download_url__ = "http://sourceforge.net/project/showfiles.php?group_id=148144"
 __description__ = "Pure Python Enhanced Metafile Library"
+__keywords__ = "graphics scalable vector image cliport emf"
+__license__ = "LGPL"
+
 
 # Reference: libemf.h
 # and also wine: http://cvs.winehq.org/cvsweb/wine/include/wingdi.h

@@ -1,7 +1,19 @@
-2005-11-19  Rob McMullen <robm@users.sourceforge.net>
+2005-11-20  Rob McMullen  <robm@users.sourceforge.net>
+
+	* setup.py now grabs long description from first paragraph of
+	module's docstring
+
+	* fixme: don't automatically create the .out.emf files when pyemf
+	is run as a standalone program.
+
+	* fixme: python2.3 error message:
+	pyemf.py:2340: FutureWarning: hex/oct constants > sys.maxint 
+		       will return positive values in Python 2.4 and up
+	return obj|0x80000000
+
+
+
+2005-11-19  Rob McMullen  <robm@users.sourceforge.net>
 
 	* initial release of version 2.0.0b1 to SourceForge
 	
-
-
-
