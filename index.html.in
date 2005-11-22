@@ -68,11 +68,10 @@ exercise to learn how SWIG works.  But, that's OK, because there were
 a few features left out of libEMF that I can now add in without
 waiting for them to be added to libEMF.</p>
 
-<p>I've submitted patches to the maintainer of PyRTF and shortly will
-to Matplotlib, I can now generate RTF documents that include snazzy
-scientific plots.  These documents are modifiable by both Microsoft
-Word and OpenOffice Writer, satisfying the need to be cross
-platform.</p>
+<p>I've submitted patches to the maintainers of PyRTF and Matplotlib,
+and can now generate RTF documents that include snazzy scientific
+plots.  These documents are modifiable by both Microsoft Word and
+OpenOffice Writer, satisfying the need to be cross platform.</p>
 
 <p>When SVG is understood by Word (OpenDoc nudge, nudge,
 say-no-more?), EMF will become unnecessary, but this can fill the void
@@ -82,7 +81,7 @@ in the meantime.</p>
 
 <p>$prog $version, released $release_date.  Available at the <a
 href="http://sourceforge.net/project/showfiles.php?group_id=148144">download
-page</a> </p>
+page</a>.  Patches for PyRTF and matplotlib included. </p>
 
 <p>See the <a href="roadmap.html">roadmap</a> for known issues and
 future directions.</p>
