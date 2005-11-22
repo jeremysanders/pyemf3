@@ -7,14 +7,19 @@ from Cheetah.Template import Template
 
 import pyemf
 
+module=pyemf
+
 namespace={
-    'prog':'pyemf',
-    'version':pyemf.__version__,
-    'author':pyemf.__author__,
-    'author_email':pyemf.__author_email__,
-    'url':pyemf.__url__,
-    'description':pyemf.__description__,
+    'prog':module.__name__,
+    'author':module.__author__,
+    'author_email':module.__author_email__,
+    'url':module.__url__,
+    'description':module.__description__,
+    'cvs_version':module.__version__,
+    'release_version':None,
+    'version':None,
     'release_date':None, # should stat the file instead
+    'release_file':None,
     'today':date.today().strftime("%d %B %Y"),
     'year':date.today().strftime("%Y"),
     'yearstart':'2005',
@@ -22,13 +27,38 @@ namespace={
     'preBody':'',
     }
 
-filename=namespace['prog']+'-'+namespace['version']+'.tar.gz'
-if os.path.exists(filename):
-    namespace['release_date']=date.fromtimestamp(os.path.getmtime(filename)).strftime("%d %B %Y")
-elif os.path.exists('archive/'+filename):
-    namespace['release_date']=date.fromtimestamp(os.path.getmtime('archive/'+filename)).strftime("%d %B %Y")
-else:
-    namespace['release_date']='... er, soon'
+def findlatest():
+    files=os.listdir('archive')
+    timestamp=0
+    filename=None
+    for name in files:
+        mtime=os.path.getmtime(os.path.join('archive',name))
+        if mtime>timestamp:
+            timestamp=mtime
+            filename=name
+    if timestamp>0:
+        namespace['release_date']=date.fromtimestamp(timestamp).strftime("%d %B %Y")
+        namespace['release_file']=filename
+        match=re.search(r'-([0-9]+\.[0-9]+(\.[0-9]+([ab][0-9]+)?))',filename)
+        if match:
+            namespace['release_version']=match.group(1)
+    else:
+        namespace['release_date']='... er, soon'
+
+    if namespace['release_version']:
+        namespace['version']=namespace['release_version']
+    else:
+        namespace['version']=namespace['cvs_version']
+
+##filename=namespace['prog']+'-'+namespace['version']+'.tar.gz'
+##if os.path.exists(filename):
+##    namespace['release_date']=date.fromtimestamp(os.path.getmtime(filename)).strftime("%d %B %Y")
+##elif os.path.exists('archive/'+filename):
+##    namespace['release_date']=date.fromtimestamp(os.path.getmtime('archive/'+filename)).strftime("%d %B %Y")
+##else:
+##    namespace['release_date']='... er, soon'
+
+findlatest()
 
 if int(namespace['yearstart'])<int(namespace['year']):
     namespace['yearrange']=namespace['yearstart']+'-'+namespace['year']
@@ -54,6 +84,7 @@ if __name__=='__main__':
     parser.add_option("-n", "--name", action="append", nargs=2,
                       dest="namespace")
     parser.add_option("-t", "--template", action="store", dest="template")
+    parser.add_option("-p", "--print-namespace", action="store_true", dest="printnamespace")
     (options, args) = parser.parse_args()
 
     all=''
@@ -65,6 +96,10 @@ if __name__=='__main__':
 
     if options.template:
         all=parse(options.template)
+
+    if options.printnamespace:
+        print namespace
+        sys.exit()
 
     for filename in args:
         txt=parse(filename)
