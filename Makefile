@@ -36,7 +36,7 @@ DISTFILE_TESTS = test-*.py
 
 
 
-all: html doc
+all: html doc api
 
 api/index.html: pyemf.py
 	epydoc -o api --no-private -u 'http://pyemf.sourceforge.net' pyemf.py
@@ -57,21 +57,28 @@ README.html: README.pre.in template.html.in mainmenu.html.in
 
 doc: README
 
-html: api/index.html $(HTML) $(PRE)
+html: $(HTML) $(PRE)
 
-install_html: html
-	rsync -avuz $(WEBSITE) api robm@pyemf.sourceforge.net:/home/groups/p/py/pyemf/htdocs
+publish_html: html
+	rsync -avuz $(WEBSITE) robm@pyemf.sourceforge.net:/home/groups/p/py/pyemf/htdocs
+
+api: api/index.html
+
+publish_api: api
+	rsync -avuz api robm@pyemf.sourceforge.net:/home/groups/p/py/pyemf/htdocs
+
+publish: publish_api publish_html
 
 
-
+release: dist
+	-mkdir -p archive
+	cp $(distdir).tar.gz archive
 
 dist: distdir
 	-chmod -R a+r $(distdir)
 	$(TAR) cvf $(distdir).tar $(distdir)
 	$(GZIP) $(distdir).tar
 	-rm -rf $(distdir)
-	-mkdir -p archive
-	cp $(distdir).tar.gz archive
 
 distdir: $(DISTFILES)
 	-rm -rf $(distdir)
@@ -100,7 +107,7 @@ distdir: $(DISTFILES)
 clean:
 	rm -rf *~ *.o *.exe build api README README.html index.html screenshots.html $(distdir)
 
-.PHONY: print-% clean install_html html doc
+.PHONY: print-% clean html publish_html api publish_api publish release dist distdir
 
 print-%: ; @ echo $* = $($*)
 
