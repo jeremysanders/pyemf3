@@ -3444,13 +3444,18 @@ if __name__ == "__main__":
 
         parser=OptionParser(usage="usage: %prog [options] emf-files...")
         parser.add_option("-v", action="store_true", dest="verbose", default=False)
+        parser.add_option("-s", action="store_true", dest="save", default=False)
+        parser.add_option("-o", action="store", dest="outputfile", default=None)
         (options, args) = parser.parse_args()
+        # print options
     except:
         # hackola to work with Python 2.2, but this shouldn't be a
         # factor when imported in normal programs because __name__
         # will never equal "__main__", so this will never get called.
         class data:
             verbose=True
+            save=True
+            outputfile=None
 
         options=data()
         args=sys.argv[1:]
@@ -3459,9 +3464,15 @@ if __name__ == "__main__":
         for filename in args:
             e=EMF(verbose=options.verbose)
             e.load(filename)
-            print "Saving %s..." % (filename+".out.emf")
-            e.save(filename+".out.emf")
-            print "%s saved successfully." % (filename+".out.emf")
+            if options.save:
+                if not options.outputfile:
+                    options.outputfile=filename+".out.emf"
+                print "Saving %s..." % options.outputfile
+                ret=e.save(options.outputfile)
+                if ret:
+                    print "%s saved successfully." % options.outputfile
+                else:
+                    print "problem saving %s!" % options.outputfile
     else:
         e=EMF(verbose=options.verbose)
         e.save("new.emf")

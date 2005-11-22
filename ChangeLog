@@ -1,12 +1,14 @@
+2005-11-22  Rob McMullen  <robm@users.sourceforge.net>
+
+	* fixed: don't automatically create the .out.emf files when pyemf
+	is run as a standalone program.  Now need -s option to save.
+
 2005-11-20  Rob McMullen  <robm@users.sourceforge.net>
 
 	* setup.py now grabs long description from first paragraph of
 	module's docstring
 
-	* fixme: don't automatically create the .out.emf files when pyemf
-	is run as a standalone program.
-
-	* fixme: python2.3 error message:
+	* fixed setup.py to ignore python2.3 warning message:
 	pyemf.py:2340: FutureWarning: hex/oct constants > sys.maxint 
 		       will return positive values in Python 2.4 and up
 	return obj|0x80000000
