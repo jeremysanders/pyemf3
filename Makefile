@@ -20,7 +20,7 @@ top_builddir = .
 distdir := $(PACKAGE)-$(VERSION)
 top_distdir := $(distdir)
 
-DISTFILES = pyemf.py setup.py README LICENSE PyRTF-0.45-EMF-patch.diff matplotlib-0.85-EMF-patch.diff
+DISTFILES = pyemf.py setup.py README ChangeLog LICENSE PyRTF-0.45-EMF-patch.diff matplotlib-0.85-EMF-patch.diff
 DISTFILE_TESTS = test-*.py
 
 
