@@ -186,11 +186,12 @@ Drawing
 The methods listed under B{Drawing Primitives} below use either the
 current line style or the current fill style (or both).  Any primitive
 that creates a closed figure (L{Polygon<EMF.Polygon>},
-L{Rectangle<EMF.Rectangle>}, L{RoundRect<EMF.RoundRect>},
-L{Ellipse<EMF.Ellipse>}, L{Chord<EMF.Chord>}, and L{Pie<EMF.Pie>})
-will use both the line and fill style.  Others
-(L{Polyline<EMF.Polyline>} and L{Arc<EMF.Arc>}) will only use the line
-style, excepting L{SetPixel<EMF.SetPixel>} which doesn't use either.
+L{PolyPolygon<EMF.PolyPolygon>}, L{Rectangle<EMF.Rectangle>},
+L{RoundRect<EMF.RoundRect>}, L{Ellipse<EMF.Ellipse>},
+L{Chord<EMF.Chord>}, and L{Pie<EMF.Pie>}) will use both the line and
+fill style.  Others (L{Polyline<EMF.Polyline>},
+L{PolyPolyline<EMF.PolyPolyline>} and L{Arc<EMF.Arc>}) will only use
+the line style, excepting L{SetPixel<EMF.SetPixel>} which doesn't use either.
 
 
 Paths
@@ -2065,7 +2066,7 @@ L{pyemf} for an overview / mini tutorial.
 
 @group Creating Metafiles: __init__, load, save
 @group Drawing Parameters: GetStockObject, SelectObject, DeleteObject, CreatePen, CreateSolidBrush, CreateHatchBrush, SetBkColor, SetBkMode, SetPolyFillMode
-@group Drawing Primitives: SetPixel, Polyline, Polygon, Rectangle, RoundRect, Ellipse, Arc, Chord, Pie, PolyBezier
+@group Drawing Primitives: SetPixel, Polyline, PolyPolyline, Polygon, PolyPolygon, Rectangle, RoundRect, Ellipse, Arc, Chord, Pie, PolyBezier
 @group Path Primatives: BeginPath, EndPath, MoveTo, LineTo, PolylineTo, ArcTo,
  PolyBezierTo, CloseFigure, FillPath, StrokePath, StrokeAndFillPath
 @group Clipping: SelectClipPath
@@ -2862,10 +2863,9 @@ Draw a sequence of connected lines.
     def PolyPolyline(self,polylines):
         """
 
-Draw multiple L{Polylines}.  The polylines argument is a list of
-lists, where each inner list represents a single polyline.  Each
-polyline is described by a list of x,y tuples as in L{Polyline}.  For
-example::
+Draw multiple polylines.  The polylines argument is a list of lists,
+where each inner list represents a single polyline.  Each polyline is
+described by a list of x,y tuples as in L{Polyline}.  For example::
 
   lines=[[(100,100),(200,100)],
          [(300,100),(400,100)]]
@@ -2874,10 +2874,10 @@ example::
 draws two lines, one from 100,100 to 200,100, and another from 300,100
 to 400,100.
 
-@param polylines: list containing lists of x,y tuples
+@param polylines: list of lines, where each line is a list of x,y tuples
+@type polylines: list
 @return: true if polypolyline is successfully rendered.
 @rtype: int
-@type points: tuple
 
         """
         return self._appendOptimizePoly16(polylines,_EMR._POLYPOLYLINE16,_EMR._POLYPOLYLINE)
@@ -2886,9 +2886,14 @@ to 400,100.
     def Polygon(self,points):
         """
 
-Draw a sequence of connected straight line segments where the end
-of the last line segment is connected to the beginning of the first
-line segment.
+Draw a closed figure bounded by straight line segments.  A polygon is
+defined by a list of points that define the endpoints for a series of
+connected straight line segments.  The end of the last line segment is
+automatically connected to the beginning of the first line segment,
+the border is drawn with the current pen, and the interior is filled
+with the current brush.  See L{SetPolyFillMode} for the fill effects
+when an overlapping polygon is defined.
+
 @param points: list of x,y tuples
 @return: true if polygon is successfully rendered.
 @rtype: int
@@ -2908,10 +2913,9 @@ line segment.
     def PolyPolygon(self,polygons):
         """
 
-Draw multiple L{Polygons}.  The polygons argument is a list of
-lists, where each inner list represents a single polygon.  Each
-polygon is described by a list of x,y tuples as in L{Polygon}.  For
-example::
+Draw multiple polygons.  The polygons argument is a list of lists,
+where each inner list represents a single polygon.  Each polygon is
+described by a list of x,y tuples as in L{Polygon}.  For example::
 
   lines=[[(100,100),(200,100),(200,200),(100,200)],
          [(300,100),(400,100),(400,200),(300,200)]]
@@ -2920,12 +2924,13 @@ example::
 draws two squares.
 
 B{Note:} Currently partially supported in OpenOffice.  The line width
-is ignored and the polygon border is not closed (the final point is not connected to the starting point in each polygon).
+is ignored and the polygon border is not closed (the final point is
+not connected to the starting point in each polygon).
 
-@param polygons: list containing lists of x,y tuples
+@param polygons: list of polygons, where each polygon is a list of x,y tuples
+@type polygons: list
 @return: true if polypolygon is successfully rendered.
 @rtype: int
-@type points: tuple
 
         """
         return self._appendOptimizePoly16(polygons,_EMR._POLYPOLYGON16,_EMR._POLYPOLYGON)
