@@ -1201,8 +1201,13 @@ class _EMR:
                      ('i','cptl')]
         emr_point_type='i'
         
-        def __init__(self):
+        def __init__(self,points=[],polycounts=[],bounds=(0,0,0,0)):
             _EMR_UNKNOWN.__init__(self)
+            self.setBounds(bounds)
+            self.cptl=len(points)
+            self.aptl=points
+            self.nPolys=len(polycounts)
+            self.aPolyCounts=polycounts
 
         def unserializeExtra(self,data):
             # print "found %d extra bytes." % len(data)
@@ -2301,6 +2306,28 @@ Write the EMF to disk.
             return 0
         return 1
 
+    def _appendOptimizePoly16(self,polylist,cls16,cls):
+        """polylist is a list of lists of points, where each inner
+        list represents a single polygon or line.  The number of
+        polygons is the size of the outer list."""
+        points=[]
+        polycounts=[]
+        for polygon in polylist:
+            count=0
+            for point in polygon:
+                points.append(point)
+                count+=1
+            polycounts.append(count)
+        
+        bounds=self._getBounds(points)
+        if self._useShort(bounds):
+            e=cls16(points,polycounts,bounds)
+        else:
+            e=cls(points,polycounts,bounds)
+        if not self._append(e):
+            return 0
+        return 1
+
     def _appendHandle(self,e):
         handle=self.dc.addObject(e)
         if not self._append(e):
@@ -2832,6 +2859,30 @@ Draw a sequence of connected lines.
         return self._appendOptimize16(points,_EMR._POLYLINE16,_EMR._POLYLINE)
     
 
+    def PolyPolyline(self,polylines):
+        """
+
+Draw multiple L{Polylines}.  The polylines argument is a list of
+lists, where each inner list represents a single polyline.  Each
+polyline is described by a list of x,y tuples as in L{Polyline}.  For
+example::
+
+  lines=[[(100,100),(200,100)],
+         [(300,100),(400,100)]]
+  emf.PolyPolyline(lines)
+
+draws two lines, one from 100,100 to 200,100, and another from 300,100
+to 400,100.
+
+@param polylines: list containing lists of x,y tuples
+@return: true if polypolyline is successfully rendered.
+@rtype: int
+@type points: tuple
+
+        """
+        return self._appendOptimizePoly16(polylines,_EMR._POLYPOLYLINE16,_EMR._POLYPOLYLINE)
+    
+
     def Polygon(self,points):
         """
 
@@ -2852,6 +2903,33 @@ line segment.
                 if self.verbose: print "converting to rectangle, option 2:"
                 return self.Rectangle(points[0][0],points[0][1],points[2][0],points[2][1])
         return self._appendOptimize16(points,_EMR._POLYGON16,_EMR._POLYGON)
+
+
+    def PolyPolygon(self,polygons):
+        """
+
+Draw multiple L{Polygons}.  The polygons argument is a list of
+lists, where each inner list represents a single polygon.  Each
+polygon is described by a list of x,y tuples as in L{Polygon}.  For
+example::
+
+  lines=[[(100,100),(200,100),(200,200),(100,200)],
+         [(300,100),(400,100),(400,200),(300,200)]]
+  emf.PolyPolygon(lines)
+
+draws two squares.
+
+B{Note:} Currently partially supported in OpenOffice.  The line width
+is ignored and the polygon border is not closed (the final point is not connected to the starting point in each polygon).
+
+@param polygons: list containing lists of x,y tuples
+@return: true if polypolygon is successfully rendered.
+@rtype: int
+@type points: tuple
+
+        """
+        return self._appendOptimizePoly16(polygons,_EMR._POLYPOLYGON16,_EMR._POLYPOLYGON)
+    
 
     def Ellipse(self,left,top,right,bottom):
         """

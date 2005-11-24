@@ -1,3 +1,7 @@
+2005-11-24  Rob McMullen  <robm@users.sourceforge.net>
+
+	* added: PolyPolygon and PolyPolyline
+
 2005-11-22  Rob McMullen  <robm@users.sourceforge.net>
 
 	* fixed: don't automatically create the .out.emf files when pyemf
@@ -8,7 +12,7 @@
 	* setup.py now grabs long description from first paragraph of
 	module's docstring
 
-	* fixed setup.py to ignore python2.3 warning message:
+	* fixed setup.py to ignore 4python2.3 warning message:
 	pyemf.py:2340: FutureWarning: hex/oct constants > sys.maxint 
 		       will return positive values in Python 2.4 and up
 	return obj|0x80000000
