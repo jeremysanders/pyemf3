@@ -27,10 +27,10 @@ DISTFILE_TESTS = test-*.py
 .SUFFIXES:      .html.in .pre.in .html
 
 .html.in.html: template.html.in mainmenu.html.in
-	./Makedoc.py -o $*.html -n mainMenu mainmenu.html.in -n htmlBody $*.html.in -t template.html.in
+	./Makedoc.py -m pyemf -o $*.html -n mainMenu mainmenu.html.in -n htmlBody $*.html.in -t template.html.in
 
 .pre.in.html: template.html.in mainmenu.html.in
-	./Makedoc.py -o $*.html -n mainMenu mainmenu.html.in -n preBody $*.pre.in -t template.html.in
+	./Makedoc.py -m pyemf -o $*.html -n mainMenu mainmenu.html.in -n preBody $*.pre.in -t template.html.in
 
 
 
@@ -39,10 +39,11 @@ DISTFILE_TESTS = test-*.py
 all: html doc api
 
 api/index.html: pyemf.py
-	epydoc -o api --no-private -u 'http://pyemf.sourceforge.net' pyemf.py
+	./Makedoc.py -m pyemf -d -o /tmp/pyemf.py pyemf.py
+	epydoc -o api --no-private -u 'http://pyemf.sourceforge.net' /tmp/pyemf.py
 
 README: README.pre.in
-	./Makedoc.py -o README README.pre.in
+	./Makedoc.py -m pyemf -o README README.pre.in
 
 index.html: index.html.in template.html.in mainmenu.html.in
 
@@ -97,7 +98,8 @@ distdir: $(DISTFILES)
 	done
 	mkdir $(distdir)/website
 	cp $(WEBSITE) $(distdir)/website
-	epydoc -o $(distdir)/website/api --no-private -u '../index.html' pyemf.py
+	./Makedoc.py -m pyemf -r version cvs_version -d -o /tmp/pyemf.py pyemf.py
+	epydoc -o $(distdir)/website/api --no-private -u '../index.html' /tmp/pyemf.py
 	mkdir $(distdir)/examples
 	cp $(DISTFILE_TESTS) $(distdir)/examples
 

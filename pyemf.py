@@ -232,10 +232,8 @@ paths seem to be supported and are transformed, but text is not
 (though it should be).
 
 
-@author: Rob McMullen
-@version: 2.0.0b1
-
-
+@author: $author
+@version: $version
 """
 
 __extra_epydoc_fields__ = [
