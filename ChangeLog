@@ -1,5 +1,7 @@
 2005-12-07  Rob McMullen  <robm@users.sourceforge.net>
 
+	* Released version 2.0.0b2 to SourceForge
+
 	* fixed: optimize Pie to display an ellipse when the start line
 	and end line are the same.  This fixes a problem with OpenOffice's
 	rendering.
