@@ -89,7 +89,7 @@ give a nod to myself for some good effort.</p>
 <dt>PolyPolyline and PolyPolygon missing</dt>
 <dd>
 
-<p class="ontarget">Target: fix before 2.0.0 final</p>
+<p class="ontarget">Target: fixed in 2.0.0b2</p>
 
 </dd>
 
@@ -97,7 +97,7 @@ give a nod to myself for some good effort.</p>
 <dt>Methods that should return coordinates or colors not working</dt>
 <dd>
 
-<p class="ontarget">Target: fix before 2.0.0 final</p>
+<p class="plannedtarget">Target: fix in 2.1?</p>
 
 <p>According to the ECMA spec, some Set methods should return the
 previous color or location.  This requires that the internal
@@ -110,7 +110,7 @@ $version that isn't quite happening yet.</p>
 <dt>SaveDC/RestoreDC stack not maintained</dt>
 <dd>
 
-<p class="ontarget">Target: fix before 2.0.0 final</p>
+<p class="plannedtarget">Target: fix in 2.1?</p>
 
 <p>SaveDC may be called multiple times, so the device context
 parameters should be saved on a stack so that return values for
