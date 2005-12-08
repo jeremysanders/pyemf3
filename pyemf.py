@@ -3086,8 +3086,13 @@ L{Arc}, and it is filled with the current brush.
 @type yend: int
 
         """
-        return self._append(_EMR._PIE(left,top,right,bottom,
-                                    xstart,ystart,xend,yend))
+        if xstart==xend and ystart==yend:
+            # Fix for OpenOffice: doesn't render a full ellipse when
+            # the start and end angles are the same
+            e=_EMR._ELLIPSE((left,top,right,bottom))
+        else:
+            e=_EMR._PIE(left,top,right,bottom,xstart,ystart,xend,yend)
+        return self._append(e)
 
     def PolyBezier(self,points):
         """

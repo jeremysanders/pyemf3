@@ -1,3 +1,9 @@
+2005-12-07  Rob McMullen  <robm@users.sourceforge.net>
+
+	* fixed: optimize Pie to display an ellipse when the start line
+	and end line are the same.  This fixes a problem with OpenOffice's
+	rendering.
+
 2005-11-24  Rob McMullen  <robm@users.sourceforge.net>
 
 	* added: PolyPolygon and PolyPolyline
@@ -12,7 +18,7 @@
 	* setup.py now grabs long description from first paragraph of
 	module's docstring
 
-	* fixed setup.py to ignore 4python2.3 warning message:
+	* fixed setup.py to ignore python2.3 warning message:
 	pyemf.py:2340: FutureWarning: hex/oct constants > sys.maxint 
 		       will return positive values in Python 2.4 and up
 	return obj|0x80000000

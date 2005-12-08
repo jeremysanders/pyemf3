@@ -27,6 +27,9 @@ print "after Chord"
 x+=size
 y+=size
 emf.Pie(x,y,x+size,y+size,x,y,x,y+size)
+
+x+=size
+emf.Pie(x,y,x+size,y+size,x,y+(size/2),x,y+(size/2))
 print "after Pie"
 
 
