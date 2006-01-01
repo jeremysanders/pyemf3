@@ -185,6 +185,10 @@ $ python test-drawing1.py
 and examine the output file 'test-drawing1.emf' by loading it in
 OpenOffice Impress.
 
+Also included in the examples directory is the program
+'test--run-all.py' that will run all the tests.
+
+
 
 
 KNOWN ISSUES
@@ -198,7 +202,7 @@ information on the unsupported parts of the ECMA-234 standard.
 DISCLAIMER
 ==========
 
-$prog, Copyright (c) $year $author ($author_email)
+$prog, Copyright (c) $yearrange $author ($author_email)
 
 $prog comes with ABSOLUTELY NO WARRANTY; for details see the
 file COPYING included in the source distribution, or see the web site
