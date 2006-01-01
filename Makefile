@@ -81,7 +81,7 @@ dist: distdir
 	$(GZIP) $(distdir).tar
 	-rm -rf $(distdir)
 
-distdir: $(DISTFILES)
+distdir: $(DISTFILES) $(WEBSITE)
 	-rm -rf $(distdir)
 	mkdir $(distdir)
 	-chmod 777 $(distdir)
@@ -107,7 +107,7 @@ distdir: $(DISTFILES)
 
 
 clean:
-	rm -rf *~ *.o *.exe build api README README.html index.html screenshots.html $(distdir)
+	rm -rf *~ *.o *.exe build api README $(HTML) $(PRE) $(distdir)
 
 .PHONY: print-% clean html publish_html api publish_api publish release dist distdir
 
