@@ -1,5 +1,7 @@
 2006-01-01  Rob McMullen  <robm@users.sourceforge.net>
 
+	* Released version 2.0.0 to SourceForge
+
 	* added: program to run all tests
 
 	* fixed: problems in some examples with Python 2.2
