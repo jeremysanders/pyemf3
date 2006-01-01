@@ -2,8 +2,6 @@
 
 import pyemf
 
-from math import radians,cos,sin
-
 print "Test of clip paths."
 
 def clippath(emf,text,x,y,size=300):

@@ -2,7 +2,11 @@
 
 import pyemf
 
-from math import radians,cos,sin
+import math
+if 'radians' not in dir(math):
+    def radians(deg):
+        return deg*math.pi/180.0
+    math.radians=radians
 
 print "Test of world transformations."
 
@@ -68,8 +72,9 @@ emf.Polyline([(dx,0),(dx,dy),(0,dy)])
 emf.SelectObject(dashed)
 
 d=45
-angle=radians(d)
-emf.SetWorldTransform(cos(angle),-sin(angle),sin(angle),cos(angle),dx,dy)
+angle=math.radians(d)
+emf.SetWorldTransform(math.cos(angle),-math.sin(angle),
+                      math.sin(angle),math.cos(angle),dx,dy)
 path(emf,"rotate %d deg, translate (%d,%d) loc: 0,0" % (d,dx,dy),0,0,300)
 
 
@@ -84,8 +89,10 @@ emf.Polyline([(dx,0),(dx,dy),(0,dy)])
 emf.SelectObject(dashed)
 
 d=80
-angle=radians(d)
-emf.ModifyWorldTransform(pyemf.MWT_RIGHTMULTIPLY,cos(angle),-sin(angle),sin(angle),cos(angle),dx,dy)
+angle=math.radians(d)
+emf.ModifyWorldTransform(pyemf.MWT_RIGHTMULTIPLY,
+                         math.cos(angle),-math.sin(angle),
+                         math.sin(angle),math.cos(angle),dx,dy)
 path(emf,"rotate %d deg, translate (%d,%d) loc: 0,0" % (d,dx,dy),0,0,300)
 
 
