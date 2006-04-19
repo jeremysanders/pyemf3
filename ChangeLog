@@ -1,3 +1,9 @@
+2006-04-19  Rob McMullen  <robm@users.sourceforge.net>
+
+	* fixed: EMF.load should open files in binary mode (thanks to
+	Jerome Alet for pointing this out).  Need to add a test case for
+	this.
+
 2006-01-01  Rob McMullen  <robm@users.sourceforge.net>
 
 	* Released version 2.0.0 to SourceForge

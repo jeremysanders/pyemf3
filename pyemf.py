@@ -2138,7 +2138,7 @@ object, they will be overwritten by the records from this file.
             self.filename=filename
 
         if self.filename:
-            fh=open(self.filename)
+            fh=open(self.filename,'rb')
             self.records=[]
             self._unserialize(fh)
             self.scaleheader=False
