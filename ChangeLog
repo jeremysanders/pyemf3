@@ -1,3 +1,9 @@
+2006-05-01  Rob McMullen  <robm@users.sourceforge.net>
+
+	* fixed: EMF.CreateFont's default value for pitch_family shouldn't
+	have quotes around it.  (Thanks to Michael F. Lamb for this bug
+	report.)
+
 2006-04-19  Rob McMullen  <robm@users.sourceforge.net>
 
 	* fixed: EMF.load should open files in binary mode (thanks to

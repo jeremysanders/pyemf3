@@ -3385,7 +3385,7 @@ Set the text foreground color.
             return 0
         return 1
 
-    def CreateFont(self,height,width=0,escapement=0,orientation=0,weight=FW_NORMAL,italic=0,underline=0,strike_out=0,charset=ANSI_CHARSET,out_precision=OUT_DEFAULT_PRECIS,clip_precision=CLIP_DEFAULT_PRECIS,quality=DEFAULT_QUALITY,pitch_family='DEFAULT_PITCH|FF_DONTCARE',name='Times New Roman'):
+    def CreateFont(self,height,width=0,escapement=0,orientation=0,weight=FW_NORMAL,italic=0,underline=0,strike_out=0,charset=ANSI_CHARSET,out_precision=OUT_DEFAULT_PRECIS,clip_precision=CLIP_DEFAULT_PRECIS,quality=DEFAULT_QUALITY,pitch_family=DEFAULT_PITCH|FF_DONTCARE,name='Times New Roman'):
         """
 
 Create a new font object. Presumably, when rendering the EMF the
