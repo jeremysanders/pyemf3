@@ -608,14 +608,14 @@ class _DC:
         self.width=0
         self.height=0
         if units=='mm':
-            self.setPhysicalSize(0,0,int(width*100),int(height*100))
+            self.setPhysicalSize([[0,0],[int(width*100),int(height*100)]])
         else:
-            self.setPhysicalSize(0,0,int(width*2540),int(height*2540))
+            self.setPhysicalSize([[0,0],[int(width*2540),int(height*2540)]])
 
         # addressable pixel sizes
         self.pixelwidth=0
         self.pixelheight=0
-        self.setPixelSize(0,0,int(width*density),int(height*density))
+        self.setPixelSize([[0,0],[int(width*density),int(height*density)]])
             
         #self.text_alignment = TA_BASELINE;
         self.text_color = RGB(0,0,0);
@@ -653,23 +653,25 @@ class _DC:
     def getBounds(self,header):
         """Extract the dimensions from an _EMR._HEADER record."""
         
-        self.setPhysicalSize(header.rclFrame_left,header.rclFrame_top,
-                             header.rclFrame_right,header.rclFrame_bottom)
-        if header.szlMicrometers_cx>0:
-            self.ref_width=header.szlMicrometers_cx/10
-            self.ref_height=header.szlMicrometers_cy/10
+        self.setPhysicalSize(header.rclFrame)
+        if header.szlMicrometers[0]>0:
+            self.ref_width=header.szlMicrometers[0]/10
+            self.ref_height=header.szlMicrometers[1]/10
         else:
-            self.ref_width=header.szlMillimeters_cx*100
-            self.ref_height=header.szlMillimeters_cy*100
+            self.ref_width=header.szlMillimeters[0]*100
+            self.ref_height=header.szlMillimeters[1]*100
 
-        self.setPixelSize(header.rclBounds_left,header.rclBounds_top,
-                           header.rclBounds_right,header.rclBounds_bottom)
-        self.ref_pixelwidth=header.szlDevice_cx
-        self.ref_pixelheight=header.szlDevice_cy
+        self.setPixelSize(header.rclBounds)
+        self.ref_pixelwidth=header.szlDevice[0]
+        self.ref_pixelheight=header.szlDevice[1]
 
-    def setPhysicalSize(self,left,top,right,bottom):
+    def setPhysicalSize(self,points):
         """Set the physical (i.e. stuff you could measure with a
         meterstick) dimensions."""
+        left=points[0][0]
+        top=points[0][1]
+        right=points[1][0]
+        bottom=points[1][1]
         self.width=right-left
         self.height=bottom-top
         self.frame_left=left
@@ -677,8 +679,12 @@ class _DC:
         self.frame_right=right
         self.frame_bottom=bottom
 
-    def setPixelSize(self,left,top,right,bottom):
+    def setPixelSize(self,points):
         """Set the pixel-addressable dimensions."""
+        left=points[0][0]
+        top=points[0][1]
+        right=points[1][0]
+        bottom=points[1][1]
         self.pixelwidth=right-left
         self.pixelheight=bottom-top
         self.bounds_left=left
@@ -730,115 +736,109 @@ class _DC:
         self.objects.pop()
 
 
+# A structrecord class for EMF strings
+try:
+    import structrecord
+except ImportError:
+    import pyemfstructrecord as structrecord
 
-class _EMR_FORMAT:
-    def __init__(self,emr_id,typedef):
-        self.typedef=typedef
-        self.id=emr_id
-        self.fmtlist=[] # list of typecodes
-        self.defaults=[] # list of default values
-        self.fmt="<" # string for pack/unpack.  little endian
-        self.structsize=0
+class EMFString(structrecord.Member):
+    def __init__(self,default=None,size=2,num=1,offset=None):
+        # Note the two bytes per unicode char
+        structrecord.Member.__init__(self,None,size=size,num=num,offset=offset)
+        self.setDefault(default)
 
-        self.names=[]
-        self.namepos={}
-        
-        self.debug=0
+    def calcNumBytes(self,obj,name):
+        if self.hasNumReference():
+            # If this is a dynamic string, calculate the size required
+            txt=obj.values[name]
+            if self.size==2:
+                # it's unicode, so get the number of actual bytes required
+                # to store it
+                txt=txt.encode('utf-16le')
+            # EMF requires that strings be stored as multiples of 4 bytes
+            extra=_round4(len(txt))-len(txt)
+            return len(txt)+extra
+        else:
+            # this is a fixed length string, so we know the length already.
+            return structrecord.Member.calcNumBytes(self,obj,name)
 
-        self.setFormat(typedef)
+    def calcNum(self,obj,name):
+        if self.hasNumReference():
+            return len(obj.values[name])
+        else:
+            return structrecord.Member.calcNumBytes(self,obj,name)
 
-    def setFormat(self,typedef,default=None):
-        if self.debug: print "typedef=%s" % str(typedef)
-        if isinstance(typedef,list) or isinstance(typedef,tuple):
-            for item in typedef:
-                if len(item)==3:
-                    typecode,name,default=item
-                else:
-                    typecode,name=item
-                self.appendFormat(typecode,name,default)
-        elif typedef:
-            raise AttributeError("format must be a list")
-        self.structsize=struct.calcsize(self.fmt)
-        if self.debug: print "current struct=%s size=%d\n  names=%s" % (self.fmt,self.structsize,self.names)
+    def unpack(self,obj,name,data,ptr):
+        offset=self.getOffset(obj)
+        if offset==None:
+            pass
+        elif offset>0:
+            ptr=offset
+        else:
+            return ('',0)
 
-    def appendFormat(self,typecode,name,default):
-        self.fmt+=typecode
-        self.fmtlist.append(typecode)
-        self.defaults.append(default)
-        self.namepos[name]=len(self.names)
-        self.names.append(name)
+        size=self.getNumBytes(obj)
+        txt=data[ptr:ptr+size]
+        size=_round4(len(txt))
+        if self.size==2:
+            txt=txt.decode('utf-16le') # Now is a unicode string
+        if self.debug:
+            try:
+                print "str: '%s'" % str(txt)
+            except UnicodeEncodeError:
+                print "<<<BAD UNICODE STRING>>>: '%s'" % repr(txt)
+        return (txt,size)
+
+    def pack(self,obj,name,value):
+        txt=value
+        if self.size==2:
+            txt=txt.encode('utf-16le')
+        if self.hasNumReference():
+            extra=_round4(len(txt))-len(txt) # must be multiple of 4
+            if extra>0:
+                txt+='\0'*extra
+        else:
+            maxlen=self.getNumBytes(obj)
+            if len(txt)>maxlen:
+                txt=txt[0:maxlen]
+            else:
+                txt+='\0'*(maxlen-len(txt))
+        return txt
+
+    def getDefault(self):
+        # FIXME: need to take account of number
+        return self.default
+
+    def setDefault(self,default):
+        if default is None:
+            if self.size==2:
+                default=u''
+            else:
+                default=''
+        self.default=default
 
 
 
-
-
-class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn't work
+class _EMR_UNKNOWN(structrecord.Record): # extend from new-style class, or __getattr__ doesn't work
     """baseclass for EMR objects"""
     emr_id=0
-    emr_typedef=()
-    format=None
 
     twobytepadding='\0'*2
     
     def __init__(self):
+        structrecord.Record.__init__(self)
         self.iType=self.__class__.emr_id
         self.nSize=0
 
-        self.verbose=0
+        self.verbose=False
         
         self.datasize=0
         self.data=None
         self.unhandleddata=None
 
-        # number of padding zeros we had to add because the format was
-        # expecting more data
-        self.zerofill=0
-
-        # if we've never seen this class before, create a new format.
-        # Note that subclasses of classes that we have already seen
-        # pick up any undefined class attributes from their
-        # superclasses, so we have to check if this is a subclass with
-        # a different typedef
-        if self.__class__.format==None or self.__class__.emr_typedef != self.format.typedef:
-            if self.verbose: print "creating format for %d" % self.__class__.emr_id
-            self.__class__.format=_EMR_FORMAT(self.__class__.emr_id,self.__class__.emr_typedef)
-
-        # list of values parsed from the input stream
-        self.values=copy.copy(self.__class__.format.defaults)
-
         # error code.  Currently just used as a boolean
         self.error=0
-
-
-    def __getattr__(self,name):
-        """Return EMR attribute if the name exists in the typedef list
-        of the object.  This is only called when the standard
-        attribute lookup fails on this object, so we don't have to
-        handle the case where name is an actual attribute of self."""
-        f=_EMR_UNKNOWN.__getattribute__(self,'format')
-        try:
-            if name in f.names:
-                v=_EMR_UNKNOWN.__getattribute__(self,'values')
-                index=f.namepos[name]
-                return v[index]
-        except IndexError:
-            raise IndexError("name=%s index=%d values=%s" % (name,index,str(v)))
-        raise AttributeError("%s not defined in EMR object" % name)
-
-    def __setattr__(self,name,value):
-        """Set a value in the object, propagating through to
-        self.values[] if the name is in the typedef list."""
-        f=_EMR_UNKNOWN.__getattribute__(self,'format')
-        try:
-            if f and name in f.names:
-                v=_EMR_UNKNOWN.__getattribute__(self,'values')
-                index=f.namepos[name]
-                v[index]=value
-            else:
-                # it's not an automatically serializable item, so store it.
-                self.__dict__[name]=value
-        except IndexError:
-            raise IndexError("name=%s index=%d values=%s" % (name,index,str(v)))
 
     def hasHandle(self):
         """Return true if this object has a handle that needs to be
@@ -849,44 +849,30 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
         """Set bounds of object.  Depends on naming convention always
         defining the bounding rectangle as
         rclBounds_[left|top|right|bottom]."""
-        self.rclBounds_left=bounds[0]
-        self.rclBounds_top=bounds[1]
-        self.rclBounds_right=bounds[2]
-        self.rclBounds_bottom=bounds[3]
+        self.rclBounds=[[bounds[0][0],bounds[0][1]],[bounds[1][0],bounds[1][1]]]
 
     def getBounds(self):
         """Return bounds of object, or None if not applicable."""
+        if 'rclBounds' in self.values:
+            return self.rclBounds
         return None
 
-    def unserialize(self,fh,itype=-1,nsize=-1):
+    def unserialize(self,fh,already_read,itype=-1,nsize=-1):
         """Read data from the file object and, using the format
         structure defined by the subclass, parse the data and store it
         in self.values[] list."""
+        prevlen=len(already_read)
+        
         if itype>0:
             self.iType=itype
             self.nSize=nsize
         else:
-            (self.iType,self.nSize)=struct.unpack("<ii",8)
-        if self.nSize>8:
-            self.datasize=self.nSize-8
-            self.data=fh.read(self.datasize)
-            if self.format.structsize>0:
-                if self.format.structsize>len(self.data):
-                    # we have a problem.  More stuff to unparse than
-                    # we have data.  Hmmm.  Fill with binary zeros
-                    # till I think of a better idea.
-                    self.zerofill=self.format.structsize-len(self.data)
-                    self.data+="\0"*self.zerofill
-                self.values=list(struct.unpack(self.format.fmt,self.data[0:self.format.structsize]))
-            if self.datasize>self.format.structsize:
-                self.unserializeExtra(self.data[self.format.structsize:])
-
-    def unserializeOffset(self,offset):
-        """Adjust offset to point to correct location in extra data.
-        Offsets in the EMR record are from the start of the record, so
-        we must subtract 8 bytes for iType and nSize, and also
-        subtract the size of the format structure."""
-        return offset-8-self.format.structsize-self.zerofill
+            (self.iType,self.nSize)=struct.unpack("<ii",already_read)
+        if self.nSize>prevlen:
+            self.data=already_read+fh.read(self.nSize-prevlen)
+            last=self.format.unpack(self.data,self,prevlen)
+            if self.nSize>last:
+                self.unserializeExtra(self.data[last:])
 
     def unserializeExtra(self,data):
         """Hook for subclasses to handle extra data in the record that
@@ -894,37 +880,31 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
         self.unhandleddata=data
         pass
 
-    def unserializeList(self,fmt,count,data,start):
-        fmt="<%d%s" % (count,fmt)
-        size=struct.calcsize(fmt)
-        vals=list(struct.unpack(fmt,data[start:start+size]))
-        #print "vals fmt=%s size=%d: %s" % (fmt,len(vals),str(vals))
-        start+=size
-        return (start,vals)
-
-    def unserializePoints(self,fmt,count,data,start):
-        fmt="<%d%s" % ((2*count),fmt)
-        size=struct.calcsize(fmt)
-        vals=struct.unpack(fmt,data[start:start+size])
-        pairs=[(vals[i],vals[i+1]) for i in range(0,len(vals),2)]
-        #print "points size=%d: %s" % (len(pairs),pairs)
-        start+=size
-        return (start,pairs)
-            
     def serialize(self,fh):
-        fh.write(struct.pack("<ii",self.iType,self.nSize))
         try:
-            fh.write(struct.pack(self.format.fmt,*self.values))
+            #print "packing!"
+            bytes=self.format.pack(self.values,self,8)
+            #fh.write(struct.pack(self.format.fmt,*self.values))
         except struct.error:
             print "!!!!!Struct error:",
             print self
             raise
+        before=self.nSize
+        self.nSize=8+len(bytes)+self.sizeExtra()
+        if self.verbose and before!=self.nSize:
+            print "resize: before=%d after=%d" % (before,self.nSize),
+            print self
+        if self.nSize%4 != 0:
+            print "size error--must be divisible by 4. before=%d after=%d calcNumBytes=%d extra=%d" % (before,self.nSize,len(bytes),self.sizeExtra())
+            for name in self.format.names:
+                fmt=self.format.fmtmap[name]
+                size=fmt.calcNumBytes(self,name)
+                print "  name=%s size=%s" % (name,size)
+            print self
+            raise TypeError
+        fh.write(struct.pack("<ii",self.iType,self.nSize))
+        fh.write(bytes)
         self.serializeExtra(fh)
-
-    def serializeOffset(self):
-        """Return the initial offset for any extra data that must be
-        written to the record.  See L{unserializeOffset}."""
-        return 8+self.format.structsize
 
     def serializeExtra(self,fh):
         """This is for special cases, like writing text or lists.  If
@@ -933,33 +913,18 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
         if self.unhandleddata:
             fh.write(self.unhandleddata)
             
-
-    def serializeList(self,fh,fmt,vals):
-        fmt="<%s" % fmt
-        for val in vals:
-            fh.write(struct.pack(fmt,val))
-
-    def serializePoints(self,fh,fmt,pairs):
-        fmt="<2%s" % fmt
-        for pair in pairs:
-            fh.write(struct.pack(fmt,pair[0],pair[1]))
-
-    def serializeString(self,fh,txt):
-        if isinstance(txt,unicode):
-            txt=txt.encode('utf-16le')
-        fh.write(txt)
-        extra=_round4(len(txt))-len(txt)
-        if extra>0:
-            fh.write('\0'*extra)
-
     def resize(self):
         before=self.nSize
-        self.nSize=8+self.format.structsize+self.sizeExtra()
+        self.nSize=8+self.format.calcNumBytes(self)+self.sizeExtra()
         if self.verbose and before!=self.nSize:
             print "resize: before=%d after=%d" % (before,self.nSize),
             print self
         if self.nSize%4 != 0:
-            print "size error.  Must be divisible by 4"
+            print "size error--must be divisible by 4. before=%d after=%d calcNumBytes=%d extra=%d" % (before,self.nSize,self.format.calcNumBytes(self),self.sizeExtra())
+            for name in self.format.names:
+                fmt=self.format.fmtmap[name]
+                size=fmt.calcNumBytes(self,name)
+                print "  name=%s size=%s" % (name,size)
             print self
             raise TypeError
 
@@ -973,45 +938,12 @@ class _EMR_UNKNOWN(object): # extend from new-style class, or __getattr__ doesn'
             return len(self.unhandleddata)
         return 0
 
-    def str_extra(self):
-        """Hook to print out extra data that isn't in the format"""
-        return ""
-
-    def str_color(self,val):
-        return "red=0x%02x green=0x%02x blue=0x%02x" % ((val&0xff),((val&0xff00)>>8),((val&0xff0000)>>16))
-
-    def str_decode(self,typecode,name):
-        val=_EMR_UNKNOWN.__getattr__(self,name)
-        if name.endswith("olor"):
-            val=self.str_color(val)
-        elif typecode.endswith("s"):
-            val=val.decode('utf-16le')
-        return val
-    
-    def str_details(self):
-        txt=StringIO()
-
-        # _EMR_UNKNOWN objects don't have a typedef, so only process
-        # those that do
-        if self.format.typedef:
-            #print "typedef=%s" % str(self.format.typedef)
-            for item in self.format.typedef:
-                typecode=item[0]
-                name=item[1]
-                val=self.str_decode(typecode,name)
-                try:
-                    txt.write("\t%-20s: %s\n" % (name,val))
-                except UnicodeEncodeError:
-                    txt.write("\t%-20s: <<<BAD UNICODE STRING>>>\n" % name)
-        txt.write(self.str_extra())
-        return txt.getvalue()
-
     def __str__(self):
         ret=""
-        details=self.str_details()
+        details=self.format.getString(self)
         if details:
             ret=os.linesep
-        return "**%s: iType=%s nSize=%s  struct='%s' size=%d\n%s%s" % (self.__class__.__name__.lstrip('_'),self.iType,self.nSize,self.format.fmt,self.format.structsize,details,ret)
+        return "**%s: iType=%s nSize=%s  struct='%s' size=%d extra=%d\n%s%s" % (self.__class__.__name__.lstrip('_'),self.iType,self.nSize,self.format.fmt,self.format.minstructsize,self.sizeExtra(),details,ret)
         return 
 
 
@@ -1025,32 +957,26 @@ class _EMR:
         description string."""
 
         emr_id=1
-        emr_typedef=[('i','rclBounds_left'),
-                     ('i','rclBounds_top'),
-                     ('i','rclBounds_right'),
-                     ('i','rclBounds_bottom'),
-                     ('i','rclFrame_left'),
-                     ('i','rclFrame_top'),
-                     ('i','rclFrame_right'),
-                     ('i','rclFrame_bottom'),
-                     ('i','dSignature',1179469088),
-                     ('i','nVersion',0x10000),
-                     ('i','nBytes',0),
-                     ('i','nRecords',0),
-                     ('h','nHandles',0),
-                     ('h','sReserved',0),
-                     ('i','nDescription',0),
-                     ('i','offDescription',0),
-                     ('i','nPalEntries',0),
-                     ('i','szlDevice_cx',1024),
-                     ('i','szlDevice_cy',768),
-                     ('i','szlMillimeters_cx',320),
-                     ('i','szlMillimeters_cy',240),
-                     ('i','cbPixelFormat',0),
-                     ('i','offPixelFormat',0),
-                     ('i','bOpenGL',0),
-                     ('i','szlMicrometers_cx'),
-                     ('i','szlMicrometers_cy')]
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds'),
+            (structrecord.Points(num=2),'rclFrame'),
+            ('i','dSignature',1179469088),
+            ('i','nVersion',0x10000),
+            ('i','nBytes',0),
+            ('i','nRecords',0),
+            ('h','nHandles',0),
+            ('h','sReserved',0),
+            ('i','nDescription',0),
+            ('i','offDescription',0),
+            ('i','nPalEntries',0),
+            (structrecord.List(num=2),'szlDevice',(1024,768)),
+            (structrecord.List(num=2),'szlMillimeters',(320,240)),
+            ('i','cbPixelFormat',0),
+            ('i','offPixelFormat',0),
+            ('i','bOpenGL',0),
+            (structrecord.List(num=2),'szlMicrometers'),
+            (EMFString(num='nDescription',offset='offDescription'),'description'),
+            ]
         
         def __init__(self,description=''):
             _EMR_UNKNOWN.__init__(self)
@@ -1068,106 +994,41 @@ class _EMR:
                 self.description=u'pyemf '+__version__.decode('utf-8')+u'\0'+description+u'\0\0'
             self.nDescription=len(self.description)
 
-        def unserializeExtra(self,data):
-            if self.verbose: print "found %d extra bytes." % len(data)
-
-            # FIXME: descriptionStart could potentially be negative if
-            # we have an old format metafile without stuff after
-            # szlMillimeters AND we have a description.
-            if self.offDescription>0:
-                start=self.unserializeOffset(self.offDescription)
-                # unicode is always stored in little endian format
-                txt=data[start:start+(2*self.nDescription)]
-                self.description=txt.decode('utf-16le')
-                if self.verbose: print "str: %s" % self.description
-
-        def str_extra(self):
-            txt=StringIO()
-            txt.write("\tunicode string: %s\n" % str(self.description))
-            txt.write("%s\n" % (struct.pack('16s',self.description.encode('utf-16le'))))
-            return txt.getvalue()
-
         def setBounds(self,dc,scaleheader):
-            self.rclBounds_left=dc.bounds_left
-            self.rclBounds_top=dc.bounds_top
-            self.rclBounds_right=dc.bounds_right
-            self.rclBounds_bottom=dc.bounds_bottom
-            
-            self.rclFrame_left=dc.frame_left
-            self.rclFrame_top=dc.frame_top
-            self.rclFrame_right=dc.frame_right
-            self.rclFrame_bottom=dc.frame_bottom
+            self.rclBounds=[[dc.bounds_left,dc.bounds_top],
+                            [dc.bounds_right,dc.bounds_bottom]]
+            self.rclFrame=[[dc.frame_left,dc.frame_top],
+                           [dc.frame_right,dc.frame_bottom]]
 
             if scaleheader:
-                self.szlDevice_cx=dc.pixelwidth
-                self.szlDevice_cy=dc.pixelheight
-                self.szlMicrometers_cx=dc.width*10
-                self.szlMicrometers_cy=dc.height*10
+                self.szlDevice[0]=dc.pixelwidth
+                self.szlDevice[1]=dc.pixelheight
+                self.szlMicrometers[0]=dc.width*10
+                self.szlMicrometers[1]=dc.height*10
             else:
-                self.szlDevice_cx=dc.ref_pixelwidth
-                self.szlDevice_cy=dc.ref_pixelheight
-                self.szlMicrometers_cx=dc.ref_width*10
-                self.szlMicrometers_cy=dc.ref_height*10
+                self.szlDevice[0]=dc.ref_pixelwidth
+                self.szlDevice[1]=dc.ref_pixelheight
+                self.szlMicrometers[0]=dc.ref_width*10
+                self.szlMicrometers[1]=dc.ref_height*10
                 
-            self.szlMillimeters_cx=self.szlMicrometers_cx/1000
-            self.szlMillimeters_cy=self.szlMicrometers_cy/1000
+            self.szlMillimeters[0]=self.szlMicrometers[0]/1000
+            self.szlMillimeters[1]=self.szlMicrometers[1]/1000
                 
-
-
-        def sizeExtra(self):
-            if self.szlMicrometers_cx==0:
-                self.szlMicrometers_cx=self.szlMillimeters_cx*1000
-                self.szlMicrometers_cy=self.szlMillimeters_cy*1000
-
-            self.nDescription=len(self.description)
-            if self.nDescription>0:
-                self.offDescription=self.serializeOffset()
-            else:
-                self.offDescription=0
-            sizestring=_round4(self.nDescription*2) # always unicode
-            
-            return sizestring
-
-        def serializeExtra(self,fh):
-            self.serializeString(fh,self.description)
-
-
 
     class _POLYBEZIER(_EMR_UNKNOWN):
         emr_id=2
-        emr_typedef=[('i','rclBounds_left'),
-                     ('i','rclBounds_top'),
-                     ('i','rclBounds_right'),
-                     ('i','rclBounds_bottom'),
-                     ('i','cptl')]
-        emr_point_type='i'
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds'),
+            ('i','cptl'),
+            (structrecord.Points(num='cptl',fmt='i'),'aptl'),
+            ]
         
-        def __init__(self,points=[],bounds=(0,0,0,0)):
+        def __init__(self,points=[],bounds=((0,0),(0,0))):
             _EMR_UNKNOWN.__init__(self)
             self.setBounds(bounds)
             self.cptl=len(points)
             self.aptl=points
 
-        def unserializeExtra(self,data):
-            # print "found %d extra bytes." % len(data)
-
-            start=0
-            start,self.aptl=self.unserializePoints(self.emr_point_type,
-                                                   self.cptl,data,start)
-            # print "apts size=%d: %s" % (len(self.apts),self.apts)
-
-        def sizeExtra(self):
-            return struct.calcsize(self.emr_point_type)*2*self.cptl
-
-        def serializeExtra(self,fh):
-            self.serializePoints(fh,self.emr_point_type,self.aptl)
-
-        def str_extra(self):
-            txt=StringIO()
-            start=0
-            txt.write("\tpoints: %s\n" % str(self.aptl))
-                    
-            return txt.getvalue()
 
     class _POLYGON(_POLYBEZIER):
         emr_id=3
@@ -1179,10 +1040,7 @@ class _EMR:
 
     class _POLYBEZIERTO(_POLYBEZIER):
         emr_id=5
-
-        def getBounds(self):
-            return (self.rclBounds_left,self.rclBounds_top,
-                    self.rclBounds_right,self.rclBounds_bottom)
+        pass
 
     class _POLYLINETO(_POLYBEZIERTO):
         emr_id=6
@@ -1192,15 +1050,15 @@ class _EMR:
 
     class _POLYPOLYLINE(_EMR_UNKNOWN):
         emr_id=7
-        emr_typedef=[('i','rclBounds_left'),
-                     ('i','rclBounds_top'),
-                     ('i','rclBounds_right'),
-                     ('i','rclBounds_bottom'),
-                     ('i','nPolys'),
-                     ('i','cptl')]
-        emr_point_type='i'
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds'),
+            ('i','nPolys'),
+            ('i','cptl'),
+            (structrecord.List(num='nPolys',fmt='i'),'aPolyCounts'),
+            (structrecord.Points(num='cptl',fmt='i'),'aptl'),
+            ]
         
-        def __init__(self,points=[],polycounts=[],bounds=(0,0,0,0)):
+        def __init__(self,points=[],polycounts=[],bounds=((0,0),(0,0))):
             _EMR_UNKNOWN.__init__(self)
             self.setBounds(bounds)
             self.cptl=len(points)
@@ -1208,45 +1066,18 @@ class _EMR:
             self.nPolys=len(polycounts)
             self.aPolyCounts=polycounts
 
-        def unserializeExtra(self,data):
-            # print "found %d extra bytes." % len(data)
-
-            start=0
-            start,self.aPolyCounts=self.unserializeList("i",self.nPolys,data,start)
-            # print "aPolyCounts start=%d size=%d: %s" % (start,len(self.aPolyCounts),str(self.aPolyCounts))
-
-            start,self.aptl=self.unserializePoints(self.emr_point_type,self.cptl,data,start)
-            # print "apts size=%d: %s" % (len(self.apts),self.apts)
-
-        def sizeExtra(self):
-            return (struct.calcsize("i")*self.nPolys +
-                    struct.calcsize(self.emr_point_type)*2*self.cptl)
-
-        def serializeExtra(self,fh):
-            self.serializeList(fh,"i",self.aPolyCounts)
-            self.serializePoints(fh,self.emr_point_type,self.aptl)
-
-        def str_extra(self):
-            txt=StringIO()
-            start=0
-            for n in range(self.nPolys):
-                txt.write("\tPolygon %d: %d points\n" % (n,self.aPolyCounts[n]))
-                txt.write("\t\t%s\n" % str(self.aptl[start:start+self.aPolyCounts[n]]))
-                start+=self.aPolyCounts[n]
-                    
-            return txt.getvalue()
 
     class _POLYPOLYGON(_POLYPOLYLINE):
         emr_id=8
         pass
 
 
-
-
     class _SETWINDOWEXTEX(_EMR_UNKNOWN):
         emr_id=9
-        emr_typedef=[('i','szlExtent_cx'),
-                     ('i','szlExtent_cy')]
+        typedef=[
+            ('i','szlExtent_cx'),
+            ('i','szlExtent_cy'),
+            ]
         
         def __init__(self,cx=0,cy=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1256,8 +1087,10 @@ class _EMR:
 
     class _SETWINDOWORGEX(_EMR_UNKNOWN):
         emr_id=10
-        emr_typedef=[('i','ptlOrigin_x'),
-                     ('i','ptlOrigin_y')]
+        typedef=[
+            ('i','ptlOrigin_x'),
+            ('i','ptlOrigin_y'),
+            ]
         
         def __init__(self,x=0,y=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1286,10 +1119,11 @@ class _EMR:
         record.  I don't know if that's a broken example or what, but
         both Windows progs and OpenOffice seem to handle it."""
         emr_id=14
-        emr_typedef=[
-                ('i','nPalEntries',0),
-                ('i','offPalEntries',0),
-                ('i','nSizeLast',0)]
+        typedef=[
+            ('i','nPalEntries',0),
+            ('i','offPalEntries',0),
+            ('i','nSizeLast',0)
+            ]
         
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
@@ -1297,10 +1131,11 @@ class _EMR:
 
     class _SETPIXELV(_EMR_UNKNOWN):
         emr_id=15
-        emr_typedef=[
-                ('i','ptlPixel_x'),
-                ('i','ptlPixel_y'),
-                ('i','crColor')]
+        typedef=[
+            ('i','ptlPixel_x'),
+            ('i','ptlPixel_y'),
+            ('i','crColor')
+            ]
         
         def __init__(self,x=0,y=0,color=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1319,7 +1154,7 @@ class _EMR:
 
     class _SETMAPMODE(_EMR_UNKNOWN):
         emr_id=17
-        emr_typedef=[('i','iMode',MM_ANISOTROPIC)]
+        typedef=[('i','iMode',MM_ANISOTROPIC)]
         
         def __init__(self,mode=MM_ANISOTROPIC,first=0,last=MM_MAX):
             _EMR_UNKNOWN.__init__(self)
@@ -1360,7 +1195,7 @@ class _EMR:
 
     class _SETTEXTCOLOR(_EMR_UNKNOWN):
         emr_id=24
-        emr_typedef=[('i','crColor',0)]
+        typedef=[('i','crColor',0)]
         
         def __init__(self,color=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1377,9 +1212,10 @@ class _EMR:
 
     class _MOVETOEX(_EMR_UNKNOWN):
         emr_id=27
-        emr_typedef=[
-                ('i','ptl_x'),
-                ('i','ptl_y')]
+        typedef=[
+            ('i','ptl_x'),
+            ('i','ptl_y'),
+            ]
         
         def __init__(self,x=0,y=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1387,7 +1223,7 @@ class _EMR:
             self.ptl_y=y
 
         def getBounds(self):
-            return (self.ptl_x,self.ptl_y,self.ptl_x,self.ptl_y)
+            return ((self.ptl_x,self.ptl_y),(self.ptl_x,self.ptl_y))
             
 
 #define EMR_SETMETARGN	28
@@ -1396,11 +1232,12 @@ class _EMR:
 
     class _SCALEVIEWPORTEXTEX(_EMR_UNKNOWN):
         emr_id=31
-        emr_typedef=[
-                ('i','xNum',1),
-                ('i','xDenom',1),
-                ('i','yNum',1),
-                ('i','yDenom',1)]
+        typedef=[
+            ('i','xNum',1),
+            ('i','xDenom',1),
+            ('i','yNum',1),
+            ('i','yDenom',1),
+            ]
         
         def __init__(self,xn=1,xd=1,yn=1,yd=1):
             _EMR_UNKNOWN.__init__(self)
@@ -1420,7 +1257,7 @@ class _EMR:
 
     class _RESTOREDC(_EMR_UNKNOWN):
         emr_id=34
-        emr_typedef=[('i','iRelative')]
+        typedef=[('i','iRelative')]
         
         def __init__(self,rel=-1):
             _EMR_UNKNOWN.__init__(self)
@@ -1429,13 +1266,14 @@ class _EMR:
 
     class _SETWORLDTRANSFORM(_EMR_UNKNOWN):
         emr_id=35
-        emr_typedef=[
-                ('f','eM11'),
-                ('f','eM12'),
-                ('f','eM21'),
-                ('f','eM22'),
-                ('f','eDx'),
-                ('f','eDy')]
+        typedef=[
+            ('f','eM11'),
+            ('f','eM12'),
+            ('f','eM21'),
+            ('f','eM22'),
+            ('f','eDx'),
+            ('f','eDy'),
+            ]
         
         def __init__(self,em11=1.0,em12=0.0,em21=0.0,em22=1.0,edx=0.0,edy=0.0):
             _EMR_UNKNOWN.__init__(self)
@@ -1448,14 +1286,15 @@ class _EMR:
 
     class _MODIFYWORLDTRANSFORM(_EMR_UNKNOWN):
         emr_id=36
-        emr_typedef=[
-                ('f','eM11'),
-                ('f','eM12'),
-                ('f','eM21'),
-                ('f','eM22'),
-                ('f','eDx'),
-                ('f','eDy'),
-                ('i','iMode')]
+        typedef=[
+            ('f','eM11'),
+            ('f','eM12'),
+            ('f','eM21'),
+            ('f','eM22'),
+            ('f','eDx'),
+            ('f','eDy'),
+            ('i','iMode'),
+            ]
         
         def __init__(self,em11=1.0,em12=0.0,em21=0.0,em22=1.0,edx=0.0,edy=0.0,mode=MWT_IDENTITY):
             _EMR_UNKNOWN.__init__(self)
@@ -1475,7 +1314,7 @@ class _EMR:
         objects have their high order bit set, so the handle must be
         an unsigned int."""
         emr_id=37
-        emr_typedef=[('I','handle')]
+        typedef=[('I','handle')]
         
         def __init__(self,dc=None,handle=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1486,12 +1325,13 @@ class _EMR:
     # invisible line, use style=PS_NULL
     class _CREATEPEN(_EMR_UNKNOWN):
         emr_id=38
-        emr_typedef=[
-                ('i','handle',0),
-                ('i','lopn_style'),
-                ('i','lopn_width'),
-                ('i','lopn_unused',0),
-                ('i','lopn_color')]
+        typedef=[
+            ('i','handle',0),
+            ('i','lopn_style'),
+            ('i','lopn_width'),
+            ('i','lopn_unused',0),
+            ('i','lopn_color'),
+            ]
         
         def __init__(self,style=PS_SOLID,width=1,color=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1505,11 +1345,12 @@ class _EMR:
 
     class _CREATEBRUSHINDIRECT(_EMR_UNKNOWN):
         emr_id=39
-        emr_typedef=[
-                ('i','handle',0),
-                ('I','lbStyle'),
-                ('i','lbColor'),
-                ('I','lbHatch')]
+        typedef=[
+            ('i','handle',0),
+            ('I','lbStyle'),
+            ('i','lbColor'),
+            ('I','lbHatch'),
+            ]
         
         def __init__(self,style=BS_SOLID,hatch=HS_HORIZONTAL,color=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1528,12 +1369,13 @@ class _EMR:
 
     class _ANGLEARC(_EMR_UNKNOWN):
         emr_id=41
-        emr_typedef=[
-                ('i','ptlCenter_x'),
-                ('i','ptlCenter_y'),
-                ('i','nRadius'),
-                ('f','eStartAngle'),
-                ('f','eSweepAngle')]
+        typedef=[
+            ('i','ptlCenter_x'),
+            ('i','ptlCenter_y'),
+            ('i','nRadius'),
+            ('f','eStartAngle'),
+            ('f','eSweepAngle'),
+            ]
         
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
@@ -1541,18 +1383,13 @@ class _EMR:
 
     class _ELLIPSE(_EMR_UNKNOWN):
         emr_id=42
-        emr_typedef=[
-                ('i','rclBox_left'),
-                ('i','rclBox_top'),
-                ('i','rclBox_right'),
-                ('i','rclBox_bottom')]
+        typedef=[
+            (structrecord.Points(num=2),'rclBox'),
+            ]
         
-        def __init__(self,box=(0,0,0,0)):
+        def __init__(self,box=((0,0),(0,0))):
             _EMR_UNKNOWN.__init__(self)
-            self.rclBox_left=box[0]
-            self.rclBox_top=box[1]
-            self.rclBox_right=box[2]
-            self.rclBox_bottom=box[3]
+            self.rclBox=[[box[0][0],box[0][1]],[box[1][0],box[1][1]]]
 
 
     class _RECTANGLE(_ELLIPSE):
@@ -1562,43 +1399,32 @@ class _EMR:
 
     class _ROUNDRECT(_EMR_UNKNOWN):
         emr_id=44
-        emr_typedef=[
-                ('i','rclBox_left'),
-                ('i','rclBox_top'),
-                ('i','rclBox_right'),
-                ('i','rclBox_bottom'),
-                ('i','szlCorner_cx'),
-                ('i','szlCorner_cy')]
+        typedef=[
+            (structrecord.Points(num=2),'rclBox'),
+            ('i','szlCorner_cx'),
+            ('i','szlCorner_cy')
+            ]
         
-        def __init__(self,box=(0,0,0,0),cx=0,cy=0):
+        def __init__(self,box=((0,0),(0,0)),cx=0,cy=0):
             _EMR_UNKNOWN.__init__(self)
-            self.rclBox_left=box[0]
-            self.rclBox_top=box[1]
-            self.rclBox_right=box[2]
-            self.rclBox_bottom=box[3]
+            self.rclBox=[[box[0][0],box[0][1]],[box[1][0],box[1][1]]]
             self.szlCorner_cx=cx
             self.szlCorner_cy=cy
 
 
     class _ARC(_EMR_UNKNOWN):
         emr_id=45
-        emr_typedef=[
-                ('i','rclBox_left'),
-                ('i','rclBox_top'),
-                ('i','rclBox_right'),
-                ('i','rclBox_bottom'),
-                ('i','ptlStart_x'),
-                ('i','ptlStart_y'),
-                ('i','ptlEnd_x'),
-                ('i','ptlEnd_y')]
+        typedef=[
+            (structrecord.Points(num=2),'rclBox'),
+            ('i','ptlStart_x'),
+            ('i','ptlStart_y'),
+            ('i','ptlEnd_x'),
+            ('i','ptlEnd_y')]
         
-        def __init__(self,left=0,top=0,right=0,bottom=0,
+        def __init__(self,box=((0,0),(0,0)),
                      xstart=0,ystart=0,xend=0,yend=0):
             _EMR_UNKNOWN.__init__(self)
-            self.rclBox_left=left
-            self.rclBox_top=top
-            self.rclBox_right=right
-            self.rclBox_bottom=bottom
+            self.rclBox=[[box[0][0],box[0][1]],[box[1][0],box[1][1]]]
             self.ptlStart_x=xstart
             self.ptlStart_y=ystart
             self.ptlEnd_x=xend
@@ -1617,7 +1443,7 @@ class _EMR:
 
     class _SELECTPALETTE(_EMR_UNKNOWN):
         emr_id=48
-        emr_typedef=[('i','handle')]
+        typedef=[('i','handle')]
         
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
@@ -1626,7 +1452,7 @@ class _EMR:
     # Stub class for palette
     class _CREATEPALETTE(_EMR_UNKNOWN):
         emr_id=49
-        emr_typedef=[('i','handle',0)]
+        typedef=[('i','handle',0)]
         
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
@@ -1654,8 +1480,7 @@ class _EMR:
             # less of the ellipse than is specified by the bounds.
             # But at least the actual bounds aren't outside these
             # bounds.
-            return (self.rclBox_left,self.rclBox_top,
-                    self.rclBox_right,self.rclBox_bottom)
+            return self.rclBox
 
 
 
@@ -1664,7 +1489,7 @@ class _EMR:
 
     class _SETARCDIRECTION(_EMR_UNKNOWN):
         emr_id=57
-        emr_typedef=[('i','iArcDirection')]
+        typedef=[('i','iArcDirection')]
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
         
@@ -1690,14 +1515,12 @@ class _EMR:
 
     class _FILLPATH(_EMR_UNKNOWN):
         emr_id=62
-        emr_typedef=[
-                ('i','rclBounds_left'),
-                ('i','rclBounds_top'),
-                ('i','rclBounds_right'),
-                ('i','rclBounds_bottom')]
-        def __init__(self,bounds=(0,0,0,0)):
+        typedef=[(structrecord.Points(num=2),'rclBounds')]
+
+        def __init__(self,bounds=((0,0),(0,0))):
             _EMR_UNKNOWN.__init__(self)
             self.setBounds(bounds)
+
 
     class _STROKEANDFILLPATH(_FILLPATH):
         emr_id=63
@@ -1759,25 +1582,22 @@ class _EMR:
         @gdi: StretchDIBits
         """
         emr_id=81
-        emr_typedef=[
-                ('i','rclBounds_left'),
-                ('i','rclBounds_top'),
-                ('i','rclBounds_right'),
-                ('i','rclBounds_bottom'),
-                ('i','xDest'), 
-                ('i','yDest'), 
-                ('i','xSrc'), 
-                ('i','ySrc'), 
-                ('i','cxSrc'), 
-                ('i','cySrc'),
-                ('i','offBmiSrc'),
-                ('i','cbBmiSrc'), 
-                ('i','offBitsSrc'), 
-                ('i','cbBitsSrc'), 
-                ('i','iUsageSrc'), 
-                ('i','dwRop'), 
-                ('i','cxDest'), 
-                ('i','cyDest')]
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds'),
+            ('i','xDest'), 
+            ('i','yDest'), 
+            ('i','xSrc'), 
+            ('i','ySrc'), 
+            ('i','cxSrc'), 
+            ('i','cySrc'),
+            ('i','offBmiSrc'),
+            ('i','cbBmiSrc'), 
+            ('i','offBitsSrc'), 
+            ('i','cbBitsSrc'), 
+            ('i','iUsageSrc'), 
+            ('i','dwRop'), 
+            ('i','cxDest'), 
+            ('i','cyDest')]
         
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
@@ -1788,40 +1608,43 @@ class _EMR:
         # strings.
         
         emr_id=82
-        emr_typedef=[
-                ('i','handle'),
-                ('i','lfHeight'),
-                ('i','lfWidth'),
-                ('i','lfEscapement'),
-                ('i','lfOrientation'),
-                ('i','lfWeight'),
-                ('B','lfItalic'),
-                ('B','lfUnderline'),
-                ('B','lfStrikeOut'),
-                ('B','lfCharSet'),
-                ('B','lfOutPrecision'),
-                ('B','lfClipPrecision'),
-                ('B','lfQuality'),
-                ('B','lfPitchAndFamily'),
-                ('64s','lfFaceName',), # really a 32 char unicode string
-                ('128s','elfFullName','\0'*128), # really 64 char unicode str
-                ('64s','elfStyle','\0'*64), # really 32 char unicode str
-                ('i','elfVersion',0),
-                ('i','elfStyleSize',0),
-                ('i','elfMatch',0),
-                ('i','elfReserved',0),
-                ('i','elfVendorId',0),
-                ('i','elfCulture',0),
-                ('B','elfPanose_bFamilyType',1),
-                ('B','elfPanose_bSerifStyle',1),
-                ('B','elfPanose_bWeight',1),
-                ('B','elfPanose_bProportion',1),
-                ('B','elfPanose_bContrast',1),
-                ('B','elfPanose_bStrokeVariation',1),
-                ('B','elfPanose_bArmStyle',1),
-                ('B','elfPanose_bLetterform',1),
-                ('B','elfPanose_bMidline',1),
-                ('B','elfPanose_bXHeight',1)]
+        typedef=[
+            ('i','handle'),
+            ('i','lfHeight'),
+            ('i','lfWidth'),
+            ('i','lfEscapement'),
+            ('i','lfOrientation'),
+            ('i','lfWeight'),
+            ('B','lfItalic'),
+            ('B','lfUnderline'),
+            ('B','lfStrikeOut'),
+            ('B','lfCharSet'),
+            ('B','lfOutPrecision'),
+            ('B','lfClipPrecision'),
+            ('B','lfQuality'),
+            ('B','lfPitchAndFamily'),
+            (EMFString(num=32,size=2),'lfFaceName'),
+#            ('64s','lfFaceName',), # really a 32 char unicode string
+            (EMFString(num=64,size=2),'elfFullName'),
+#            ('128s','elfFullName','\0'*128), # really 64 char unicode str
+            (EMFString(num=32,size=2),'elfStyle'),
+#            ('64s','elfStyle','\0'*64), # really 32 char unicode str
+            ('i','elfVersion',0),
+            ('i','elfStyleSize',0),
+            ('i','elfMatch',0),
+            ('i','elfReserved',0),
+            ('i','elfVendorId',0),
+            ('i','elfCulture',0),
+            ('B','elfPanose_bFamilyType',1),
+            ('B','elfPanose_bSerifStyle',1),
+            ('B','elfPanose_bWeight',1),
+            ('B','elfPanose_bProportion',1),
+            ('B','elfPanose_bContrast',1),
+            ('B','elfPanose_bStrokeVariation',1),
+            ('B','elfPanose_bArmStyle',1),
+            ('B','elfPanose_bLetterform',1),
+            ('B','elfPanose_bMidline',1),
+            ('B','elfPanose_bXHeight',1)]
 
         def __init__(self,height=0,width=0,escapement=0,orientation=0,
                      weight=FW_NORMAL,italic=0,underline=0,strike_out=0,
@@ -1861,24 +1684,21 @@ class _EMR:
 
     class _EXTTEXTOUTA(_EMR_UNKNOWN):
         emr_id=83
-        emr_typedef=[
-                ('i','rclBounds_left',0),
-                ('i','rclBounds_top',0),
-                ('i','rclBounds_right',-1),
-                ('i','rclBounds_bottom',-1),
-                ('i','iGraphicsMode',GM_COMPATIBLE),
-                ('f','exScale',1.0),
-                ('f','eyScale',1.0),
-                ('i','ptlReference_x'),
-                ('i','ptlReference_y'),
-                ('i','nChars'),
-                ('i','offString'),
-                ('i','fOptions',0),
-                ('i','rcl_left',0),
-                ('i','rcl_top',0),
-                ('i','rcl_right',-1),
-                ('i','rcl_bottom',-1),
-                ('i','offDx',0)]
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds',[[0,0],[-1,-1]]),
+            ('i','iGraphicsMode',GM_COMPATIBLE),
+            ('f','exScale',1.0),
+            ('f','eyScale',1.0),
+            ('i','ptlReference_x'),
+            ('i','ptlReference_y'),
+            ('i','nChars'),
+            ('i','offString',0),
+            ('i','fOptions',0),
+            (structrecord.Points(num=2),'rcl',[[0,0],[-1,-1]]),
+            ('i','offDx',0),
+            (structrecord.List(num='nChars',fmt='i',offset='offDx'),'dx'),
+            (EMFString(num='nChars',size=1,offset='offString'),'string'),
+            ]
         def __init__(self,x=0,y=0,txt=""):
             _EMR_UNKNOWN.__init__(self)
             self.ptlReference_x=x
@@ -1890,64 +1710,24 @@ class _EMR:
             self.charsize=1
             self.dx=[]
 
-        def unserializeExtra(self,data):
-            # print "found %d extra bytes.  nChars=%d" % (len(data),self.nChars)
-
-            start=0
-            # print "offDx=%d offString=%d" % (self.offDx,self.offString)
-
-            # Note: offsets may appear before OR after string.  Don't
-            # assume they will appear first.
-            if self.offDx>0:
-                start=self.unserializeOffset(self.offDx)
-                start,self.dx=self.unserializeList("i",self.nChars,data,start)
-            else:
-                self.dx=[]
-                
-            if self.offString>0:
-                start=self.unserializeOffset(self.offString)
-                self.string=data[start:start+(self.charsize*self.nChars)]
-            else:
-                self.string=""
-
-        def sizeExtra(self):
-            offset=self.serializeOffset()
-            sizedx=0
-            sizestring=0
-
-            if len(self.string)>0:
-                self.nChars=len(self.string)/self.charsize
-                self.offString=offset
-                sizestring=_round4(self.charsize*self.nChars)
-                offset+=sizestring
-            if len(self.dx)>0:
-                self.offDx=offset
-                sizedx=struct.calcsize("i")*self.nChars
-                offset+=sizedx
-                
-            return (sizedx+sizestring)
-
-        def serializeExtra(self,fh):
-            # apparently the preferred way is to store the string
-            # first, then the offsets
-            if self.offString>0:
-                self.serializeString(fh,self.string)
-            if self.offDx>0:
-                self.serializeList(fh,"i",self.dx)
-
-        def str_extra(self):
-            txt=StringIO()
-            txt.write("\tdx: %s\n" % str(self.dx))
-            if self.charsize==2:
-                txt.write("\tunicode string: %s\n" % str(self.string.decode('utf-16le')))
-            else:
-                txt.write("\tascii string: %s\n" % str(self.string))
-                    
-            return txt.getvalue()
-
 
     class _EXTTEXTOUTW(_EXTTEXTOUTA):
         emr_id=84
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds',[[0,0],[-1,-1]]),
+            ('i','iGraphicsMode',GM_COMPATIBLE),
+            ('f','exScale',1.0),
+            ('f','eyScale',1.0),
+            ('i','ptlReference_x'),
+            ('i','ptlReference_y'),
+            ('i','nChars'),
+            ('i','offString',0),
+            ('i','fOptions',0),
+            (structrecord.Points(num=2),'rcl',[[0,0],[-1,-1]]),
+            ('i','offDx',0),
+            (structrecord.List(num='nChars',fmt='i',offset='offDx'),'dx'),
+            (EMFString(num='nChars',size=2,offset='offString'),'string'),
+            ]
 
         def __init__(self,x=0,y=0,txt=u''):
             _EMR._EXTTEXTOUTA.__init__(self,x,y,txt)
@@ -1958,7 +1738,11 @@ class _EMR:
 
     class _POLYBEZIER16(_POLYBEZIER):
         emr_id=85
-        emr_point_type='h'
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds'),
+            ('i','cptl'),
+            (structrecord.Points(num='cptl',fmt='h'),'aptl'),
+            ]
 
     class _POLYGON16(_POLYBEZIER16):
         emr_id=86
@@ -1970,7 +1754,11 @@ class _EMR:
 
     class _POLYBEZIERTO16(_POLYBEZIERTO):
         emr_id=88
-        emr_point_type='h'
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds'),
+            ('i','cptl'),
+            (structrecord.Points(num='cptl',fmt='h'),'aptl'),
+            ]
         pass
 
     class _POLYLINETO16(_POLYBEZIERTO16):
@@ -1979,7 +1767,13 @@ class _EMR:
 
     class _POLYPOLYLINE16(_POLYPOLYLINE):
         emr_id=90
-        emr_point_type='h'
+        typedef=[
+            (structrecord.Points(num=2),'rclBounds'),
+            ('i','nPolys'),
+            ('i','cptl'),
+            (structrecord.List(num='nPolys',fmt='i'),'aPolyCounts'),
+            (structrecord.Points(num='cptl',fmt='h'),'aptl'),
+            ]
         pass
     
     class _POLYPOLYGON16(_POLYPOLYLINE16):
@@ -2161,7 +1955,7 @@ object, they will be overwritten by the records from this file.
                     else:
                         e=_EMR_UNKNOWN()
 
-                    e.unserialize(fh,iType,nSize)
+                    e.unserialize(fh,data,iType,nSize)
                     self.records.append(e)
                     
                     if e.hasHandle():
@@ -2208,6 +2002,8 @@ through all the records and gather info.
         for e in self.records:
             e.resize()
             size+=e.nSize
+            if self.verbose: print "size=%d total=%d" % (e.nSize,size)
+        if self.verbose: print "total: %s bytes" % size
         header.nBytes=size
         
     def save(self,filename=None):
@@ -2259,29 +2055,46 @@ Write the EMF to disk.
                 top=y
             elif y>bottom:
                 bottom=y
-        return (left,top,right,bottom)
+        return ((left,top),(right,bottom))
 
     def _mergeBounds(self,bounds,itembounds):
         if itembounds:
-            if itembounds[0]<bounds[0]: bounds[0]=itembounds[0]
-            if itembounds[1]<bounds[1]: bounds[1]=itembounds[1]
-            if itembounds[2]>bounds[2]: bounds[2]=itembounds[2]
-            if itembounds[3]>bounds[3]: bounds[3]=itembounds[3]
+            if itembounds[0][0]<bounds[0][0]: bounds[0][0]=itembounds[0][0]
+            if itembounds[0][1]<bounds[0][1]: bounds[0][1]=itembounds[0][1]
+            if itembounds[1][0]>bounds[1][0]: bounds[1][0]=itembounds[1][0]
+            if itembounds[1][1]>bounds[1][1]: bounds[1][1]=itembounds[1][1]
 
     def _getPathBounds(self):
         """Get the bounding rectangle for the list of EMR records
         starting from the last saved path start to the current record."""
-        big=1000000
-        bounds=[big,big,-1,-1]
+        # If there are no bounds supplied, default to the EMF standard
+        # of ((0,0),(-1,-1)) which means that the bounds aren't
+        # precomputed.
+        bounds=[[0,0],[-1,-1]]
+
+        # find the first bounds
         for i in range(self.pathstart,len(self.records)):
-            # print "FIXME: checking record %d" % i
+            #print "FIXME: checking initial bounds on record %d" % i
             e=self.records[i]
+            # print e
+            # print "bounds=%s" % str(e.getBounds())
+            objbounds=e.getBounds()
+            if objbounds:
+                #print "bounds=%s" % str(objbounds)
+                # have to copy the object manually because we don't
+                # want to overwrite the object's bounds
+                bounds=[[objbounds[0][0],objbounds[0][1]],
+                        [objbounds[1][0],objbounds[1][1]]]
+                break
+
+        # if there are more records with bounds, merge them
+        for j in range(i,len(self.records)):
+            #print "FIXME: checking bounds for more records: %d" % j
+            e=self.records[j]
             # print e
             # print "bounds=%s" % str(e.getBounds())
             self._mergeBounds(bounds,e.getBounds())
 
-        if bounds[0]==big: bounds[0]=0
-        if bounds[1]==big: bounds[1]=0
         return bounds
 
     def _useShort(self,bounds):
@@ -2291,7 +2104,7 @@ Write the EMF to disk.
 
         SHRT_MIN=-32768
         SHRT_MAX=32767
-        if bounds[0]>=SHRT_MIN and bounds[1]>=SHRT_MIN and bounds[2]<=SHRT_MAX and bounds[3]<=SHRT_MAX:
+        if bounds[0][0]>=SHRT_MIN and bounds[0][1]>=SHRT_MIN and bounds[1][0]<=SHRT_MAX and bounds[1][1]<=SHRT_MAX:
             return True
         return False
 
@@ -2950,7 +2763,7 @@ Draw an ellipse using the current pen.
 @type bottom: int
 
         """
-        return self._append(_EMR._ELLIPSE((left,top,right,bottom)))
+        return self._append(_EMR._ELLIPSE(((left,top),(right,bottom))))
         
     def Rectangle(self,left,top,right,bottom):
         """
@@ -2968,7 +2781,7 @@ Draw a rectangle using the current pen.
 @type bottom: int
 
         """
-        return self._append(_EMR._RECTANGLE((left,top,right,bottom)))
+        return self._append(_EMR._RECTANGLE(((left,top),(right,bottom))))
 
     def RoundRect(self,left,top,right,bottom,cornerwidth,cornerheight):
         """
@@ -2990,7 +2803,7 @@ Draw a rectangle with rounded corners using the current pen.
 @type cornerheight: int
 
         """
-        return self._append(_EMR._ROUNDRECT((left,top,right,bottom,
+        return self._append(_EMR._ROUNDRECT((((left,top),(right,bottom)),
                                            cornerwidth,cornerheight)))
 
     def Arc(self,left,top,right,bottom,xstart,ystart,xend,yend):
@@ -3027,7 +2840,7 @@ rays are coincident, a complete ellipse is drawn.
 @type yend: int
 
         """
-        return self._append(_EMR._ARC(left,top,right,bottom,
+        return self._append(_EMR._ARC(((left,top),(right,bottom)),
                                     xstart,ystart,xend,yend))
 
     def Chord(self,left,top,right,bottom,xstart,ystart,xend,yend):
@@ -3057,7 +2870,7 @@ start and end.  The arc start and end points are defined as in L{Arc}.
 @type yend: int
 
         """
-        return self._append(_EMR._CHORD(left,top,right,bottom,
+        return self._append(_EMR._CHORD(((left,top),(right,bottom)),
                                     xstart,ystart,xend,yend))
 
     def Pie(self,left,top,right,bottom,xstart,ystart,xend,yend):
@@ -3089,9 +2902,9 @@ L{Arc}, and it is filled with the current brush.
         if xstart==xend and ystart==yend:
             # Fix for OpenOffice: doesn't render a full ellipse when
             # the start and end angles are the same
-            e=_EMR._ELLIPSE((left,top,right,bottom))
+            e=_EMR._ELLIPSE(((left,top),(right,bottom)))
         else:
-            e=_EMR._PIE(left,top,right,bottom,xstart,ystart,xend,yend)
+            e=_EMR._PIE(((left,top),(right,bottom)),xstart,ystart,xend,yend)
         return self._append(e)
 
     def PolyBezier(self,points):
@@ -3211,7 +3024,7 @@ B{Note:} Currently appears unsupported in OpenOffice.
 @type yend: int
 
         """
-        return self._append(_EMR._ARCTO(left,top,right,bottom,
+        return self._append(_EMR._ARCTO(((left,top),(right,bottom)),
                                     xstart,ystart,xend,yend))
 
     def PolyBezierTo(self,points):

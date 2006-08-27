@@ -1,3 +1,8 @@
+2006-08-19  Rob McMullen  <robm@users.sourceforge.net>
+
+	* refactoring: new, more flexible way of specifying the binary
+	records using the structrecord module
+
 2006-05-01  Rob McMullen  <robm@users.sourceforge.net>
 
 	* fixed: EMF.CreateFont's default value for pitch_family shouldn't
