@@ -4,7 +4,7 @@ import os,sys,re,os.path
 from cStringIO import StringIO
 from datetime import date
 from optparse import OptionParser
-from Cheetah.Template import Template
+from string import Template
 
 module=None
 
@@ -87,8 +87,10 @@ def store(keyword,infile):
         fh=open(infile)
     else:
         fh=infile
-    t=Template(file=fh,searchList=[namespace])
-    namespace[keyword]=str(t)
+    txt=fh.read()
+    t=Template(txt)
+    out=t.safe_substitute(namespace)
+    namespace[keyword]=out
 
 def remap(keyword,value):
     if value.startswith('$'):
@@ -100,8 +102,10 @@ def parse(infile):
         fh=open(infile)
     else:
         fh=infile
-    t=Template(file=fh,searchList=[namespace])
-    return str(t)
+    txt=fh.read()
+    t=Template(txt)
+    out=t.safe_substitute(namespace)
+    return out
 
 def parsedocstring(infile):
     if isinstance(infile,str):
@@ -114,9 +118,11 @@ def parsedocstring(infile):
         line=fh.readline()
         if line.find('"""')>=0: count+=1
         doc.write(line)
+    txt=doc.getvalue()
     unparsed=fh.read()
-    t=Template(doc.getvalue(),searchList=[namespace])
-    return str(t)+unparsed
+    t=Template(txt)
+    out=t.safe_substitute(namespace)
+    return out+unparsed
 
 
 
