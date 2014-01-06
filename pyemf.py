@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import print_function, division
 
 """
 
@@ -508,7 +508,7 @@ def _round4(num):
     """Round to the nearest multiple of 4 greater than or equal to the
     given number.  EMF records are required to be aligned to 4 byte
     boundaries."""
-    return ((num+3)/4)*4
+    return ((num+3)//4)*4
 
 def RGB(r,g,b):
     """
@@ -1504,8 +1504,8 @@ class _EMR:
                 self.szlMicrometers[0]=dc.ref_width*10
                 self.szlMicrometers[1]=dc.ref_height*10
                 
-            self.szlMillimeters[0]=self.szlMicrometers[0]/1000
-            self.szlMillimeters[1]=self.szlMicrometers[1]/1000
+            self.szlMillimeters[0]=self.szlMicrometers[0]//1000
+            self.szlMillimeters[1]=self.szlMicrometers[1]//1000
                 
 
     class _POLYBEZIER(_EMR_UNKNOWN):
