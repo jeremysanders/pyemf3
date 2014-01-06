@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 """
 
 pyemf is a pure python module that provides a cross-platform ability
@@ -768,7 +770,7 @@ class Field(object):
     def calcNumBytes(self,obj,name):
         if isinstance(obj.values[name],list) or isinstance(obj.values[name],tuple):
             size=self.size*len(obj.values[name])
-            if self.debug: print "  calcNumBytes: size=%d len(obj.values[%s])=%d total=%d" % (self.size,name,len(obj.values[name]),size)
+            if self.debug: print("  calcNumBytes: size=%d len(obj.values[%s])=%d total=%d" % (self.size,name,len(obj.values[name]),size))
             # also update the linked number, if applicable
         else:
             size=self.size*self.getNum(obj)
@@ -808,7 +810,7 @@ class Field(object):
             offset+=self.offset
         elif obj:
             offset+=getattr(obj,self.offset) # find obj."offset"
-        if self.debug: print "getting offset for obj=%s, self.offset=%s => offset=%d" % (obj.__class__.__name__,self.offset,offset)
+        if self.debug: print("getting offset for obj=%s, self.offset=%s => offset=%d" % (obj.__class__.__name__,self.offset,offset))
         return offset
 
     def hasOffsetReference(self):
@@ -895,9 +897,9 @@ class String(Field):
             txt=txt.decode('utf-16') # Now is a unicode string
         if self.debug:
             try:
-                print "str: '%s'" % str(txt)
+                print("str: '%s'" % str(txt))
             except UnicodeEncodeError:
-                print "<<<BAD UNICODE STRING>>>: '%s'" % repr(txt)
+                print("<<<BAD UNICODE STRING>>>: '%s'" % repr(txt))
         return (txt,size)
 
     def pack(self,obj,name,value):
@@ -981,7 +983,7 @@ class Tuples(Field):
         else:
             fmt=fmt*rank
         Field.__init__(self,fmt,struct.calcsize(fmt),num,offset=offset)
-        if self.debug: print "Tuples:%s self.size=%d" % (self.__class__.__name__,self.size)
+        if self.debug: print("Tuples:%s self.size=%d" % (self.__class__.__name__,self.size))
         self.rank=rank
         self.setDefault(default)
 
@@ -998,7 +1000,7 @@ class Tuples(Field):
             return (values,0)
         
         num=self.getNum(obj)
-        if self.debug: print "unpack: name=%s num=%d ptr=%d datasize=%d" % (name,num,ptr,len(data))
+        if self.debug: print("unpack: name=%s num=%d ptr=%d datasize=%d" % (name,num,ptr,len(data)))
         while num>0:
             values.append(list(struct.unpack(self.fmt,data[ptr:ptr+self.size])))
             ptr+=self.size
@@ -1009,7 +1011,7 @@ class Tuples(Field):
     def pack(self,obj,name,value):
         fh=StringIO()
         size=0
-        if self.debug: print "pack: value=%s" % (str(value))
+        if self.debug: print("pack: value=%s" % (str(value)))
         for val in value:
             fh.write(struct.pack(self.fmt,*val))
         return fh.getvalue()
@@ -1066,7 +1068,7 @@ class RecordFormat:
         return values
 
     def setFormat(self,typedef,default=None):
-        if self.debug: print "typedef=%s" % str(typedef)
+        if self.debug: print("typedef=%s" % str(typedef))
         if isinstance(typedef,list) or isinstance(typedef,tuple):
             for item in typedef:
                 if len(item)==3:
@@ -1076,7 +1078,7 @@ class RecordFormat:
                 self.appendFormat(typecode,name,default)
         elif typedef:
             raise AttributeError("format must be a list")
-        if self.debug: print "current struct=%s size=%d\n  names=%s" % (self.fmt,self.minstructsize,self.names)
+        if self.debug: print("current struct=%s size=%d\n  names=%s" % (self.fmt,self.minstructsize,self.names))
 
     def appendFormat(self,typecode,name,defaultvalue):
         if isinstance(typecode,str):
@@ -1104,7 +1106,7 @@ class RecordFormat:
         for name in self.names:
             fmt=self.fmtmap[name]
             bytes=fmt.calcNumBytes(obj,name)
-            if self.debug: print "calcNumBytes: %s=%d" % (name,bytes)
+            if self.debug: print("calcNumBytes: %s=%d" % (name,bytes))
             size+=bytes
         return size
 
@@ -1137,8 +1139,8 @@ class RecordFormat:
             try:
                 output[name]=fmt.pack(obj,name,values[name])
             except:
-                print "Exception while trying to pack %s for object:" % name
-                print obj
+                print("Exception while trying to pack %s for object:" % name)
+                print(obj)
                 raise
 
             # check if the offset to this parameter needs to be
@@ -1147,7 +1149,7 @@ class RecordFormat:
             refname=fmt.hasOffsetReference()
             #print output[name]
             if refname and output[name]:
-                if self.debug: print "pack: %s has offset %s, was=%d now=%d" % (name,refname,values[refname],size+alreadypacked)
+                if self.debug: print("pack: %s has offset %s, was=%d now=%d" % (name,refname,values[refname],size+alreadypacked))
                 values[refname]=size+alreadypacked
                 output[refname]=self.fmtmap[refname].pack(obj,refname,values[refname])
 
@@ -1156,7 +1158,7 @@ class RecordFormat:
             #if self.debug: print output[name]
             if refname and output[name]:
                 newnum=fmt.calcNum(obj,name)
-                if self.debug: print "pack: %s has num %s, was=%d now=%d" % (name,refname,values[refname],newnum)
+                if self.debug: print("pack: %s has num %s, was=%d now=%d" % (name,refname,values[refname],newnum))
                 values[refname]=newnum
                 output[refname]=self.fmtmap[refname].pack(obj,refname,values[refname])
             
@@ -1274,9 +1276,9 @@ class EMFString(Field):
             txt=txt.decode('utf-16le') # Now is a unicode string
         if self.debug:
             try:
-                print "str: '%s'" % str(txt)
+                print("str: '%s'" % str(txt))
             except UnicodeEncodeError:
-                print "<<<BAD UNICODE STRING>>>: '%s'" % repr(txt)
+                print("<<<BAD UNICODE STRING>>>: '%s'" % repr(txt))
         return (txt,size)
 
     def pack(self,obj,name,value):
@@ -1375,21 +1377,21 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
             bytes=self.format.pack(self.values,self,8)
             #fh.write(struct.pack(self.format.fmt,*self.values))
         except struct.error:
-            print "!!!!!Struct error:",
-            print self
+            print("!!!!!Struct error:", end=' ')
+            print(self)
             raise
         before=self.nSize
         self.nSize=8+len(bytes)+self.sizeExtra()
         if self.verbose and before!=self.nSize:
-            print "resize: before=%d after=%d" % (before,self.nSize),
-            print self
+            print("resize: before=%d after=%d" % (before,self.nSize), end=' ')
+            print(self)
         if self.nSize%4 != 0:
-            print "size error--must be divisible by 4. before=%d after=%d calcNumBytes=%d extra=%d" % (before,self.nSize,len(bytes),self.sizeExtra())
+            print("size error--must be divisible by 4. before=%d after=%d calcNumBytes=%d extra=%d" % (before,self.nSize,len(bytes),self.sizeExtra()))
             for name in self.format.names:
                 fmt=self.format.fmtmap[name]
                 size=fmt.calcNumBytes(self,name)
-                print "  name=%s size=%s" % (name,size)
-            print self
+                print("  name=%s size=%s" % (name,size))
+            print(self)
             raise TypeError
         fh.write(struct.pack("<ii",self.iType,self.nSize))
         fh.write(bytes)
@@ -1406,15 +1408,15 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
         before=self.nSize
         self.nSize=8+self.format.calcNumBytes(self)+self.sizeExtra()
         if self.verbose and before!=self.nSize:
-            print "resize: before=%d after=%d" % (before,self.nSize),
-            print self
+            print("resize: before=%d after=%d" % (before,self.nSize), end=' ')
+            print(self)
         if self.nSize%4 != 0:
-            print "size error--must be divisible by 4. before=%d after=%d calcNumBytes=%d extra=%d" % (before,self.nSize,self.format.calcNumBytes(self),self.sizeExtra())
+            print("size error--must be divisible by 4. before=%d after=%d calcNumBytes=%d extra=%d" % (before,self.nSize,self.format.calcNumBytes(self),self.sizeExtra()))
             for name in self.format.names:
                 fmt=self.format.fmtmap[name]
                 size=fmt.calcNumBytes(self,name)
-                print "  name=%s size=%s" % (name,size)
-            print self
+                print("  name=%s size=%s" % (name,size))
+            print(self)
             raise TypeError
 
     def sizeExtra(self):
@@ -1469,8 +1471,8 @@ class _EMR:
         
         def __init__(self,description=''):
             _EMR_UNKNOWN.__init__(self)
-            print self
-            print self.__class__.format.default
+            print(self)
+            print(self.__class__.format.default)
             # NOTE: rclBounds and rclFrame will be determined at
             # serialize time
 
@@ -1490,7 +1492,7 @@ class _EMR:
             self.rclFrame=[[dc.frame_left,dc.frame_top],
                            [dc.frame_right,dc.frame_bottom]]
 
-            print self
+            print(self)
             if scaleheader:
                 self.szlDevice[0]=dc.pixelwidth
                 self.szlDevice[1]=dc.pixelheight
@@ -2456,7 +2458,7 @@ object, they will be overwritten by the records from this file.
                 count=len(data)
                 if count>0:
                     (iType,nSize)=struct.unpack("<ii",data)
-                    if self.verbose: print "EMF:  iType=%d nSize=%d" % (iType,nSize)
+                    if self.verbose: print("EMF:  iType=%d nSize=%d" % (iType,nSize))
 
                     if iType in _emrmap:
                         e=_emrmap[iType]()
@@ -2472,8 +2474,8 @@ object, they will be overwritten by the records from this file.
                         self.dc.removeObject(e.handle)
                         
                     if self.verbose:
-                        print "Unserializing: ",
-                        print e
+                        print("Unserializing: ", end=' ')
+                        print(e)
                 
         except EOFError:
             pass
@@ -2483,8 +2485,8 @@ object, they will be overwritten by the records from this file.
         been flagged as having an error."""
         if not e.error:
             if self.verbose:
-                print "Appending: ",
-                print e
+                print("Appending: ", end=' ')
+                print(e)
             self.records.append(e)
             return 1
         return 0
@@ -2499,7 +2501,7 @@ through all the records and gather info.
         
         end=self.records[-1]
         if not isinstance(end,_EMR._EOF):
-            if self.verbose: print "adding EOF record"
+            if self.verbose: print("adding EOF record")
             e=_EMR._EOF()
             self._append(e)
         header=self.records[0]
@@ -2510,8 +2512,8 @@ through all the records and gather info.
         for e in self.records:
             e.resize()
             size+=e.nSize
-            if self.verbose: print "size=%d total=%d" % (e.nSize,size)
-        if self.verbose: print "total: %s bytes" % size
+            if self.verbose: print("size=%d total=%d" % (e.nSize,size))
+        if self.verbose: print("total: %s bytes" % size)
         header.nBytes=size
         
     def save(self,filename=None):
@@ -2542,7 +2544,7 @@ Write the EMF to disk.
         
     def _serialize(self,fh):
         for e in self.records:
-            if self.verbose: print e
+            if self.verbose: print(e)
             e.serialize(fh)
 
     def _create(self,width,height,dots_per_unit,units):
@@ -3221,10 +3223,10 @@ when an overlapping polygon is defined.
         """
         if len(points)==4:
             if points[0][0]==points[1][0] and points[2][0]==points[3][0] and points[0][1]==points[3][1] and points[1][1]==points[2][1]:
-                if self.verbose: print "converting to rectangle, option 1:"
+                if self.verbose: print("converting to rectangle, option 1:")
                 return self.Rectangle(points[0][0],points[0][1],points[2][0],points[2][1])
             elif points[0][1]==points[1][1] and points[2][1]==points[3][1] and points[0][0]==points[3][0] and points[1][0]==points[2][0]:
-                if self.verbose: print "converting to rectangle, option 2:"
+                if self.verbose: print("converting to rectangle, option 2:")
                 return self.Rectangle(points[0][0],points[0][1],points[2][0],points[2][1])
         return self._appendOptimize16(points,_EMR._POLYGON16,_EMR._POLYGON)
 
@@ -3874,12 +3876,12 @@ if __name__ == "__main__":
             if options.save:
                 if not options.outputfile:
                     options.outputfile=filename+".out.emf"
-                print "Saving %s..." % options.outputfile
+                print("Saving %s..." % options.outputfile)
                 ret=e.save(options.outputfile)
                 if ret:
-                    print "%s saved successfully." % options.outputfile
+                    print("%s saved successfully." % options.outputfile)
                 else:
-                    print "problem saving %s!" % options.outputfile
+                    print("problem saving %s!" % options.outputfile)
     else:
         e=EMF(verbose=options.verbose)
         e.save("new.emf")
