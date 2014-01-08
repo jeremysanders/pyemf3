@@ -253,9 +253,11 @@ import inspect
 is_py3 = sys.version_info[0] == 3
 if is_py3:
     from io import BytesIO, StringIO
+    cunicode = str
 else:
     from cStringIO import StringIO
     BytesIO = StringIO
+    cunicode = unicode
 
 # setup.py requires that these be defined, and the OnceAndOnlyOnce
 # principle is used here.  This is the only place where these values
@@ -1021,8 +1023,6 @@ class Tuples(Field):
         size=0
         if self.debug: print("pack: value=%s" % (str(value)))
         for val in value:
-            print('xxxx')
-            print(repr(self.fmt), repr(val))
             fh.write(struct.pack(self.fmt,*val))
         return fh.getvalue()
 
@@ -1293,18 +1293,18 @@ class EMFString(Field):
 
     def pack(self,obj,name,value):
         txt=value
-        if self.size==2:
-            txt=txt.encode('utf-16le')
+        if isinstance(txt, cunicode):
+            txt = txt.encode('utf-16le')
         if self.hasNumReference():
             extra=_round4(len(txt))-len(txt) # must be multiple of 4
             if extra>0:
-                txt+='\0'*extra
+                txt+=b'\0'*extra
         else:
             maxlen=self.getNumBytes(obj)
             if len(txt)>maxlen:
                 txt=txt[0:maxlen]
             else:
-                txt+='\0'*(maxlen-len(txt))
+                txt+=b'\0'*(maxlen-len(txt))
         return txt
 
     def getDefault(self):
@@ -1325,7 +1325,7 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
     """baseclass for EMR objects"""
     emr_id=0
 
-    twobytepadding='\0'*2
+    twobytepadding=b'\0'*2
     
     def __init__(self):
         Record.__init__(self)
@@ -2201,7 +2201,7 @@ class _EMR:
             _EMR_UNKNOWN.__init__(self)
             self.ptlReference_x=x
             self.ptlReference_y=y
-            if isinstance(txt,unicode):
+            if isinstance(txt,cunicode):
                 self.string=txt.encode('utf-16le')
             else:
                 self.string=txt
