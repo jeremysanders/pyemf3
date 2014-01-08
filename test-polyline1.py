@@ -25,5 +25,5 @@ for x in range(100,1000,50):
 emf.Polyline(points)
 
 ret=emf.save("test-polyline1.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))
 

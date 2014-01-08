@@ -243,11 +243,19 @@ __extra_epydoc_fields__ = [
                            ('oo', 'OpenOffice Support'),
                           ]
 
-
-import os,sys,re
+import os
+import sys
+import re
 import struct
-from cStringIO import StringIO
 import copy
+import inspect
+
+is_py3 = sys.version_info[0] == 3
+if is_py3:
+    from io import BytesIO, StringIO
+else:
+    from cStringIO import StringIO
+    BytesIO = StringIO
 
 # setup.py requires that these be defined, and the OnceAndOnlyOnce
 # principle is used here.  This is the only place where these values
@@ -961,7 +969,7 @@ class List(Field):
         return (values,self.getNumBytes(obj))
 
     def pack(self,obj,name,value):
-        fh=StringIO()
+        fh=BytesIO()
         size=0
         for val in value:
             fh.write(struct.pack(self.fmt,val))
@@ -1009,10 +1017,12 @@ class Tuples(Field):
 
     # assuming a list of lists
     def pack(self,obj,name,value):
-        fh=StringIO()
+        fh=BytesIO()
         size=0
         if self.debug: print("pack: value=%s" % (str(value)))
         for val in value:
+            print('xxxx')
+            print(repr(self.fmt), repr(val))
             fh.write(struct.pack(self.fmt,*val))
         return fh.getvalue()
 
@@ -1129,7 +1139,7 @@ class RecordFormat:
         return ptr
 
     def pack(self,values,obj,alreadypacked=0):
-        fh=StringIO()
+        fh=BytesIO()
         size=0
         output={}
         
@@ -1476,14 +1486,9 @@ class _EMR:
             # NOTE: rclBounds and rclFrame will be determined at
             # serialize time
 
-            if isinstance(description,str):
-                # turn it into a unicode string
-                # print "description=%s" % description
-                self.description=description.decode('utf-8')
-                # print "self.description=%s" % self.description
-                # print isinstance(self.description,unicode)
+            self.description = description
             if len(description)>0:
-                self.description=u'pyemf '+__version__.decode('utf-8')+u'\0'+description+u'\0\0'
+                self.description=u'pyemf '+__version__+u'\0'+description+u'\0\0'
             self.nDescription=len(self.description)
 
         def setBounds(self,dc,scaleheader):
@@ -2168,7 +2173,7 @@ class _EMR:
                 name=name[0:32]
             else:
                 name+='\0'*(32-len(name))
-            self.lfFaceName=name.decode('utf-8').encode('utf-16le')
+            self.lfFaceName=name.encode('utf-16le')
             # print "lfFaceName=%s" % self.lfFaceName
 
         def hasHandle(self):
@@ -2338,10 +2343,9 @@ _emrmap={}
 for name in dir(_EMR):
     #print name
     cls=getattr(_EMR,name,None)
-    if cls and callable(cls) and issubclass(cls,_EMR_UNKNOWN):
+    if cls and inspect.isclass(cls) and issubclass(cls,_EMR_UNKNOWN):
         #print "subclass! id=%d %s" % (cls.emr_id,str(cls))
         _emrmap[cls.emr_id]=cls
-
 
 
 class EMF:
@@ -2422,7 +2426,7 @@ this buffer.
 @returns: True for success, False for failure.
 @rtype: Boolean
         """
-        fh = StringIO(membuf)
+        fh = BytesIO(membuf)
         self._load(fh)
 
     def load(self,filename=None):

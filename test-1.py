@@ -13,4 +13,4 @@ emf.Polyline([(0,0),(width*dpi,height*dpi)])
 emf.Polyline([(0,height*dpi),(width*dpi,0)])
 
 ret=emf.save("test-1.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))

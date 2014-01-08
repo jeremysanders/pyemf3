@@ -2,7 +2,7 @@
 
 import pyemf
 
-print "Test of GetStockObject"
+print("Test of GetStockObject")
 
 width=8
 height=6
@@ -21,15 +21,15 @@ pen=emf.GetStockObject(pyemf.WHITE_PEN)
 emf.SelectObject(pen)
 emf.Rectangle(0,100,500,200)
 
-print "after Rectangle"
+print("after Rectangle")
 
 
 brush=emf.GetStockObject(pyemf.WHITE_BRUSH)
 emf.SelectObject(brush)
 points=[(200,200),(300,400),(100,400)]
 emf.Polygon(points);
-print "after Polygon"
+print("after Polygon")
 
 ret=emf.save("test-stockobject.emf")
-print "save returns %d" % ret
+print("save returns %d" % ret)
 

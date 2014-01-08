@@ -2,7 +2,7 @@
 
 import pyemf
 
-print "Test of clip paths."
+print("Test of clip paths.")
 
 def clippath(emf,text,x,y,size=300):
     emf.TextOut(x+40,y,text);
@@ -77,4 +77,4 @@ emf.TextOut(0,400,"This line is drawn after the RestoreDC(), should be smaller, 
 
 
 ret=emf.save("test-selectclippath1.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))

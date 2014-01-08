@@ -22,7 +22,7 @@ font = emf.CreateFont( -48, 0, 0, 0, pyemf.FW_NORMAL, 0, 0, 0, pyemf.ANSI_CHARSE
 emf.SelectObject(font)
 emf.TextOut( 100, 100, "height=48");
 emf.TextOut( 700, 100, "height=-48");
-print "after Font";
+print("after Font");
 
 emf.SelectObject(thin)
 
@@ -52,10 +52,10 @@ for face in fontlist:
     emf.TextOut(700, fonty, face)
 
     
-    print "after %s Font" % face
+    print("after %s Font" % face)
     fonty+=80;
 
 emf.TextOut(0,fonty,"All text should be on a green background")
 
 ret=emf.save("test-fontbackground.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))

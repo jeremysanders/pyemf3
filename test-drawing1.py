@@ -17,10 +17,10 @@ emf.SelectObject(thick)
 
 emf.Rectangle(0,0,320,640)
 emf.Rectangle(0,0,100,100)
-print "after Rectangle"
+print("after Rectangle")
 emf.Ellipse(200,200,400,400)
 emf.Arc(400,400,600,600,600,600,600,600)
-print "after Ellipse"
+print("after Ellipse")
 emf.SelectObject(dashed)
 
 emf.Polyline(((1000,1000),(2000,0)))
@@ -29,19 +29,19 @@ p2=[(0,height*dpi),(width*dpi,0)]
 emf.Polyline(p1)
 emf.SelectObject(thin)
 emf.Polyline(p2)
-print "after Line"
+print("after Line")
 
 
 points=[(0,100),(300,200),(0,300),(300,400),(0,500)]
 emf.Polyline(points)
-print "after Polyline"
+print("after Polyline")
 
 
 brush=emf.CreateSolidBrush((0x00,0xff,0xff))
 emf.SelectObject(brush)
 points=[(200,200),(300,400),(100,400)]
 emf.Polygon(points);
-print "after Polygon"
+print("after Polygon")
 
 dashedyellow=emf.CreatePen(pyemf.PS_DASH,1,(0xff,0xff,0x00))
 emf.SelectObject(dashedyellow)
@@ -53,7 +53,7 @@ emf.LineTo(120,420)
 # Don't forget EndPath!  Subsequent graphics commands won't appear without it
 emf.EndPath()
 emf.StrokePath()
-print "after StrokePath"
+print("after StrokePath")
 
 
 test1="Yellow Helvetica Test"
@@ -66,7 +66,7 @@ font = emf.CreateFont( -12, 0, 0, 0, pyemf.FW_NORMAL, 0, 0, 0, pyemf.ANSI_CHARSE
                     pyemf.DEFAULT_PITCH | pyemf.FF_DONTCARE, "Helvetica" );
 emf.SelectObject(font)
 emf.TextOut( 50, 75, test1);
-print "after Font";
+print("after Font");
 
 emf.SelectObject(thin)
 
@@ -92,9 +92,9 @@ for face in fontlist:
     emf.Polyline([(90,fonty),(320,fonty)])
     emf.Polyline(((90,fonty),(320,fonty)))
     
-    print "after %s Font" % face
+    print("after %s Font" % face)
     fonty+=25;
 
 ret=emf.save("test-drawing1.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))
 

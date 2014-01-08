@@ -37,4 +37,4 @@ for i in range(16):
 
 
 ret=emf.save("test-deleteobject.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))

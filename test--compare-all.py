@@ -56,18 +56,18 @@ class Comparison:
             else:
                 self.failed.append(filename)
                 self.show("0")
-        except Exception,e:
-            print e
+        except Exception as e:
+            print(e)
             self.failed.append(filename)
             self.show("E")
             dumpfile(filename)
             dumpfile(outputfile)
 
     def stats(self):
-        print
-        print "%d passed out of %d" % (len(self.passed),self.total)
-        print "passed: %s" % self.passed
-        print "failed: %s" % self.failed
+        print()
+        print("%d passed out of %d" % (len(self.passed),self.total))
+        print("passed: %s" % self.passed)
+        print("failed: %s" % self.failed)
 
 comp=Comparison()
 tests=glob.glob("test-[a-z0-9]*.py")

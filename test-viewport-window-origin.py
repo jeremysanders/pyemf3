@@ -2,7 +2,7 @@
 
 import pyemf
 
-print "Test of viewport origin and window origin."
+print("Test of viewport origin and window origin.")
 
 def path(emf,text,x,y,size=300):
     emf.TextOut(x,y,text);
@@ -46,14 +46,14 @@ emf.SelectObject(font)
 
 
 old=emf.SetViewportOrgEx(400,400)
-print "old viewport=%s, should be (0,0)" % str(old)
+print("old viewport=%s, should be (0,0)" % str(old))
 path(emf,"Viewport: 400,400, loc: 0,0",0,0)
 emf.StrokeAndFillPath()
 
 old=emf.SetViewportOrgEx(0,0)
-print "old viewport=%s, should be (400,400)" % str(old)
+print("old viewport=%s, should be (400,400)" % str(old))
 old=emf.SetWindowOrgEx(800,800)
-print "old window=%s, should be (0,0)" % str(old)
+print("old window=%s, should be (0,0)" % str(old))
 path(emf,"Window: 800,800, loc: 800,800",800,800)
 emf.StrokeAndFillPath()
 
@@ -61,9 +61,9 @@ emf.Polyline([(0,0),(width*dpi,height*dpi)])
 emf.Polyline([(0,height*dpi),(width*dpi,0)])
 
 old=emf.SetViewportOrgEx(200,200)
-print "old viewport=%s, should be (0,0)" % str(old)
+print("old viewport=%s, should be (0,0)" % str(old))
 old=emf.SetWindowOrgEx(800,800)
-print "old window=%s, should be (800,800)" % str(old)
+print("old window=%s, should be (800,800)" % str(old))
 path(emf,"Window: 800,800, Viewport: 200,200, loc: 1800,800",1800,800)
 emf.StrokeAndFillPath()
 
@@ -71,5 +71,5 @@ emf.StrokeAndFillPath()
 
 
 ret=emf.save("test-viewport-window-origin.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))
 

@@ -50,4 +50,4 @@ for y1 in range(y,y+500,100):
 emf.PolyPolyline(polylist)
 
 ret=emf.save("test-poly1.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))

@@ -8,7 +8,7 @@ if 'radians' not in dir(math):
         return deg*math.pi/180.0
     math.radians=radians
 
-print "Test of world transformations."
+print("Test of world transformations.")
 
 def path(emf,text,x,y,size=300):
     emf.BeginPath()

@@ -7,7 +7,7 @@ import sys
 try:
     import matplotlib
 except:
-    print "Requires matplotlib from http://matplotlib.sourceforge.net."
+    print("Requires matplotlib from http://matplotlib.sourceforge.net.")
     sys.exit()
     
 if useEMF:

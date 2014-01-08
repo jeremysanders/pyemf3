@@ -49,4 +49,4 @@ polygon(emf,x,y)
 
 
 ret=emf.save("test-poly2.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))

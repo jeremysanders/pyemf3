@@ -17,12 +17,12 @@ x=100
 y=100
 size=300
 emf.Arc(x,y,x+size,y+size,x,y,x,y+size)
-print "after Arc"
+print("after Arc")
 
 x+=size
 y+=size
 emf.Chord(x,y,x+size,y+size,x,y,x,y+size)
-print "after Chord"
+print("after Chord")
 
 x+=size
 y+=size
@@ -30,9 +30,9 @@ emf.Pie(x,y,x+size,y+size,x,y,x,y+size)
 
 x+=size
 emf.Pie(x,y,x+size,y+size,x,y+(size/2),x,y+(size/2))
-print "after Pie"
+print("after Pie")
 
 
 ret=emf.save("test-arc-chord-pie.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))
 

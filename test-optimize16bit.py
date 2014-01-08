@@ -22,4 +22,4 @@ emf.SelectObject(pen32)
 emf.Polyline([(40000,height*dpi/2),(0,height*dpi)])
 
 ret=emf.save("test-optimize16bit.emf")
-print "save returns %s" % str(ret)
+print("save returns %s" % str(ret))

@@ -1,28 +1,37 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
+
 import os,sys
 import glob
 import filecmp
 import pyemf
 
-FILTER=''.join([(len(repr(chr(x)))==3) and chr(x) or '.' for x in range(256)])
+is_py3 = sys.version_info[0] == 3
+if is_py3:
+    bchr = lambda x: bytes((x,))
+else:
+    bchr = chr
 
 def dump(fh, length=8):
+    """"Return a hex dump of the file."""
     N=0; result=''
     s=fh.read(length)
     while len(s)>0:
-       hexa = ' '.join(["%02X"%ord(x) for x in s])
-       s = s.translate(FILTER)
-       result += "%04X   %-*s   %s\n" % (N, length*3, hexa, s)
-       N+=length
-       s=fh.read(length)
+        hexa = ' '.join(["%02X"%ord(s[i:i+1]) for i in range(len(s))])
+        FILTER=b''.join([ bchr(x) if 32 <= x < 127 else b'.'
+                          for x in range(256) ])
+        s = s.translate(FILTER)
+        result += "%04X   %-*s   %s\n" % (N, length*3, hexa, s.decode('ascii'))
+        N+=length
+        s=fh.read(length)
     return result
 
 def dumpfile(filename):
-    fh=open(filename)
+    fh=open(filename, "rb")
     if fh:
         result=dump(fh)
-        fh=open(filename+".hex","w")
+        fh=open(filename+".hex", "w")
         fh.write(result)
 
 class Comparison:
@@ -41,7 +50,7 @@ class Comparison:
         filename=pyfilename[:-3]+".emf"
         outputfile=filename+".out.emf"
         try:
-            execfile(pyfilename)
+            exec(open(pyfilename).read())
             e=pyemf.EMF(verbose=self.verbose)
             e.load(filename)
             if os.path.exists(outputfile): os.remove(outputfile)
@@ -58,8 +67,8 @@ class Comparison:
             else:
                 self.failed.append(filename)
                 self.show("0")
-        except Exception,e:
-            print e
+        except Exception as e:
+            print(e)
             self.failed.append(filename)
             self.show("E")
             dumpfile(filename)
@@ -71,10 +80,10 @@ class Comparison:
         self.stats()
             
     def stats(self):
-        print
-        print "%d passed out of %d" % (len(self.passed),self.total)
-        print "passed: %s" % self.passed
-        print "failed: %s" % self.failed
+        print()
+        print("%d passed out of %d" % (len(self.passed),self.total))
+        print("passed: %s" % self.passed)
+        print("failed: %s" % self.failed)
 
 
 def test(tests,options):
@@ -85,10 +94,10 @@ def test(tests,options):
 
     tests.sort()
     for test in tests:
-        print "Running %s" % test
+        print("Running %s" % test)
         total+=1
         try:
-            execfile(test)
+            exec(open(test).read())
             filename=test[:-3]+".emf"
             try:
                 e=pyemf.EMF(verbose=options.verbose)
@@ -98,29 +107,29 @@ def test(tests,options):
                 ret=e.save(outputfile)
                 if ret:
                     if filecmp.cmp(filename,outputfile,shallow=False):
-                        print ".",
+                        print(".",)
                         passed.append(filename)
                     else:
-                        print "F",
+                        print("F",)
                         failed.append(filename)
                         dumpfile(filename)
                         dumpfile(outputfile)
                 else:
                     failed.append(filename)
-                    print "0",
-            except Exception,e:
-                print e
+                    print("0",)
+            except Exception as e:
+                print(e)
                 failed.append(filename)
-                print "E"
+                print("E")
                 dumpfile(filename)
                 dumpfile(outputfile)
         except:
             failed.append(test)
-            print "** test %s failed" % test
+            print("** test %s failed" % test)
 
-    print "%d passed out of %d" % (len(passed),total)
-    print "passed: %s" % passed
-    print "failed: %s" % failed
+    print("%d passed out of %d" % (len(passed),total))
+    print("passed: %s" % passed)
+    print("failed: %s" % failed)
 
 
 if __name__=="__main__":
