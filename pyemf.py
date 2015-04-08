@@ -250,6 +250,7 @@ import struct
 import copy
 import inspect
 
+# python 2/3 compatibility helpers
 is_py3 = sys.version_info[0] == 3
 if is_py3:
     from io import BytesIO, StringIO
@@ -271,7 +272,6 @@ __download_url__ = "http://sourceforge.net/project/showfiles.php?group_id=148144
 __description__ = "Pure Python Enhanced Metafile Library"
 __keywords__ = "graphics, scalable, vector, image, clipart, emf"
 __license__ = "LGPL"
-
 
 # Reference: libemf.h
 # and also wine: http://cvs.winehq.org/cvsweb/wine/include/wingdi.h
@@ -343,7 +343,7 @@ PS_JOIN_MASK     = 0x0000f000
 PS_COSMETIC      = 0x00000000
 PS_GEOMETRIC     = 0x00010000
 PS_TYPE_MASK     = 0x000f0000
- 
+
 # Stock GDI objects for GetStockObject()
 WHITE_BRUSH         = 0
 LTGRAY_BRUSH        = 1
@@ -594,7 +594,7 @@ class _DC:
     the mapping mode currently used.
 
     """
-    
+
     def __init__(self,width='6.0',height='4.0',density='72',units='in'):
         self.x=0
         self.y=0
@@ -603,7 +603,7 @@ class _DC:
         # number, called "handle"
         self.objects=[]
         self.objects.append(None) # handle 0 is reserved
-        
+
         # Maintain a stack that contains list of empty slots in object
         # list resulting from deletes
         self.objectholes=[]
@@ -613,7 +613,7 @@ class _DC:
         self.ref_pixelheight=768
 
         # Reference device size in mm
-        self.ref_width=320 
+        self.ref_width=320
         self.ref_height=240
 
         # physical dimensions are in .01 mm units
@@ -628,7 +628,7 @@ class _DC:
         self.pixelwidth=0
         self.pixelheight=0
         self.setPixelSize([[0,0],[int(width*density),int(height*density)]])
-            
+
         #self.text_alignment = TA_BASELINE;
         self.text_color = RGB(0,0,0);
 
@@ -650,7 +650,7 @@ class _DC:
         # Window origin.  A pixel drawn at (x,y) after the window
         # origin has been set to (xw,yw) will be displayed at
         # (x-xw,y-yw).
-        
+
         # If both window and viewport origins are set, a pixel drawn
         # at (x,y) will be displayed at (x-xw+xv,y-yw+yv)
         self.window_x=0
@@ -664,7 +664,7 @@ class _DC:
 
     def getBounds(self,header):
         """Extract the dimensions from an _EMR._HEADER record."""
-        
+
         self.setPhysicalSize(header.rclFrame)
         if header.szlMicrometers[0]>0:
             self.ref_width=header.szlMicrometers[0]/10
@@ -703,7 +703,7 @@ class _DC:
         self.bounds_top=top
         self.bounds_right=right
         self.bounds_bottom=bottom
-                
+
 
     def addObject(self,emr,handle=-1):
         """Add an object to the handle list, so it can be retrieved
@@ -962,7 +962,7 @@ class List(Field):
             ptr=offset
         else:
             return (values,0)
-        
+
         num=self.getNum(obj)
         while num>0:
             values.append(struct.unpack(self.fmt,data[ptr:ptr+self.size])[0])
@@ -1008,7 +1008,7 @@ class Tuples(Field):
             ptr=offset
         else:
             return (values,0)
-        
+
         num=self.getNum(obj)
         if self.debug: print("unpack: name=%s num=%d ptr=%d datasize=%d" % (name,num,ptr,len(data)))
         while num>0:
@@ -1054,7 +1054,7 @@ def FormatFactory(fmt):
 
 class RecordFormat:
     default_endian="<"
-    
+
     def __init__(self,typedef):
         self.typedef=typedef
         self.minstructsize=0 # minimum structure size (variable entries not counted)
@@ -1064,7 +1064,7 @@ class RecordFormat:
         self.default={}
 
         self.names=[] # order of names in record
-        
+
         self.debug=0
 
         self.fmt=''
@@ -1142,7 +1142,7 @@ class RecordFormat:
         fh=BytesIO()
         size=0
         output={}
-        
+
         # First, create all the output bytes
         for name in self.names:
             fmt=self.fmtmap[name]
@@ -1171,9 +1171,9 @@ class RecordFormat:
                 if self.debug: print("pack: %s has num %s, was=%d now=%d" % (name,refname,values[refname],newnum))
                 values[refname]=newnum
                 output[refname]=self.fmtmap[refname].pack(obj,refname,values[refname])
-            
+
             size+=len(output[name])
-            
+
         # Finally, write all the output bytes to the filehandle
         for name in self.names:
             fh.write(output[name])
@@ -1194,10 +1194,10 @@ class RecordFormat:
 
 class Record(object):
     """baseclass for binary records"""
-    
+
     format=None
     typedef=()
-    
+
     def __init__(self):
         # if we've never seen this class before, create a new format.
         # Note that subclasses of classes that we have already seen
@@ -1326,14 +1326,14 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
     emr_id=0
 
     twobytepadding=b'\0'*2
-    
+
     def __init__(self):
         Record.__init__(self)
         self.iType=self.__class__.emr_id
         self.nSize=0
 
         self.verbose=False
-        
+
         self.datasize=0
         self.data=None
         self.unhandleddata=None
@@ -1363,7 +1363,7 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
         structure defined by the subclass, parse the data and store it
         in self.values[] list."""
         prevlen=len(already_read)
-        
+
         if itype>0:
             self.iType=itype
             self.nSize=nsize
@@ -1413,7 +1413,7 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
         anything in the self.unhandleddata string."""
         if self.unhandleddata:
             fh.write(self.unhandleddata)
-            
+
     def resize(self):
         before=self.nSize
         self.nSize=8+self.format.calcNumBytes(self)+self.sizeExtra()
@@ -1445,7 +1445,7 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
         if details:
             ret=os.linesep
         return "**%s: iType=%s nSize=%s  struct='%s' size=%d extra=%d\n%s%s" % (self.__class__.__name__.lstrip('_'),self.iType,self.nSize,self.format.fmt,self.format.minstructsize,self.sizeExtra(),details,ret)
-        return 
+        return
 
 
 # Collection of classes
@@ -1478,7 +1478,7 @@ class _EMR:
             (List(num=2),'szlMicrometers'),
             (EMFString(num='nDescription',offset='offDescription'),'description'),
             ]
-        
+
         def __init__(self,description=''):
             _EMR_UNKNOWN.__init__(self)
             print(self)
@@ -1508,10 +1508,10 @@ class _EMR:
                 self.szlDevice[1]=dc.ref_pixelheight
                 self.szlMicrometers[0]=dc.ref_width*10
                 self.szlMicrometers[1]=dc.ref_height*10
-                
+
             self.szlMillimeters[0]=self.szlMicrometers[0]//1000
             self.szlMillimeters[1]=self.szlMicrometers[1]//1000
-                
+
 
     class _POLYBEZIER(_EMR_UNKNOWN):
         emr_id=2
@@ -1520,7 +1520,7 @@ class _EMR:
             ('i','cptl'),
             (Points(num='cptl',fmt='i'),'aptl'),
             ]
-        
+
         def __init__(self,points=[],bounds=((0,0),(0,0))):
             _EMR_UNKNOWN.__init__(self)
             self.setBounds(bounds)
@@ -1543,7 +1543,7 @@ class _EMR:
     class _POLYLINETO(_POLYBEZIERTO):
         emr_id=6
         pass
-    
+
 
 
     class _POLYPOLYLINE(_EMR_UNKNOWN):
@@ -1555,7 +1555,7 @@ class _EMR:
             (List(num='nPolys',fmt='i'),'aPolyCounts'),
             (Points(num='cptl',fmt='i'),'aptl'),
             ]
-        
+
         def __init__(self,points=[],polycounts=[],bounds=((0,0),(0,0))):
             _EMR_UNKNOWN.__init__(self)
             self.setBounds(bounds)
@@ -1576,7 +1576,7 @@ class _EMR:
             ('i','szlExtent_cx'),
             ('i','szlExtent_cy'),
             ]
-        
+
         def __init__(self,cx=0,cy=0):
             _EMR_UNKNOWN.__init__(self)
             self.szlExtent_cx=cx
@@ -1589,7 +1589,7 @@ class _EMR:
             ('i','ptlOrigin_x'),
             ('i','ptlOrigin_y'),
             ]
-        
+
         def __init__(self,x=0,y=0):
             _EMR_UNKNOWN.__init__(self)
             self.ptlOrigin_x=x
@@ -1622,7 +1622,7 @@ class _EMR:
             ('i','offPalEntries',0),
             ('i','nSizeLast',0)
             ]
-        
+
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
 
@@ -1634,7 +1634,7 @@ class _EMR:
             ('i','ptlPixel_y'),
             ('i','crColor')
             ]
-        
+
         def __init__(self,x=0,y=0,color=0):
             _EMR_UNKNOWN.__init__(self)
             self.ptlPixel_x=x
@@ -1645,7 +1645,7 @@ class _EMR:
     class _SETMAPPERFLAGS(_EMR_UNKNOWN):
         emr_id=16
         emr_format=[('i','dwFlags',0)]
-        
+
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
 
@@ -1653,14 +1653,14 @@ class _EMR:
     class _SETMAPMODE(_EMR_UNKNOWN):
         emr_id=17
         typedef=[('i','iMode',MM_ANISOTROPIC)]
-        
+
         def __init__(self,mode=MM_ANISOTROPIC,first=0,last=MM_MAX):
             _EMR_UNKNOWN.__init__(self)
             if mode<first or mode>last:
                 self.error=1
             else:
                 self.iMode=mode
-            
+
     class _SETBKMODE(_SETMAPMODE):
         emr_id=18
         def __init__(self,mode=OPAQUE):
@@ -1672,29 +1672,29 @@ class _EMR:
         def __init__(self,mode=ALTERNATE):
             _EMR._SETMAPMODE.__init__(self,mode,last=POLYFILL_LAST)
 
-            
+
     class _SETROP2(_SETMAPMODE):
         emr_id=20
         pass
 
-            
+
     class _SETSTRETCHBLTMODE(_SETMAPMODE):
         emr_id=21
         pass
 
-            
+
     class _SETTEXTALIGN(_SETMAPMODE):
         emr_id=22
         def __init__(self,mode=TA_BASELINE):
             _EMR._SETMAPMODE.__init__(self,mode,last=TA_MASK)
 
-            
+
 #define EMR_SETCOLORADJUSTMENT	23
 
     class _SETTEXTCOLOR(_EMR_UNKNOWN):
         emr_id=24
         typedef=[('i','crColor',0)]
-        
+
         def __init__(self,color=0):
             _EMR_UNKNOWN.__init__(self)
             self.crColor=color
@@ -1714,7 +1714,7 @@ class _EMR:
             ('i','ptl_x'),
             ('i','ptl_y'),
             ]
-        
+
         def __init__(self,x=0,y=0):
             _EMR_UNKNOWN.__init__(self)
             self.ptl_x=x
@@ -1722,7 +1722,7 @@ class _EMR:
 
         def getBounds(self):
             return ((self.ptl_x,self.ptl_y),(self.ptl_x,self.ptl_y))
-            
+
 
 #define EMR_SETMETARGN	28
 #define EMR_EXCLUDECLIPRECT	29
@@ -1736,7 +1736,7 @@ class _EMR:
             ('i','yNum',1),
             ('i','yDenom',1),
             ]
-        
+
         def __init__(self,xn=1,xd=1,yn=1,yd=1):
             _EMR_UNKNOWN.__init__(self)
             self.xNum=xn
@@ -1756,7 +1756,7 @@ class _EMR:
     class _RESTOREDC(_EMR_UNKNOWN):
         emr_id=34
         typedef=[('i','iRelative')]
-        
+
         def __init__(self,rel=-1):
             _EMR_UNKNOWN.__init__(self)
             self.iRelative=rel
@@ -1772,7 +1772,7 @@ class _EMR:
             ('f','eDx'),
             ('f','eDy'),
             ]
-        
+
         def __init__(self,em11=1.0,em12=0.0,em21=0.0,em22=1.0,edx=0.0,edy=0.0):
             _EMR_UNKNOWN.__init__(self)
             self.eM11=em11
@@ -1793,7 +1793,7 @@ class _EMR:
             ('f','eDy'),
             ('i','iMode'),
             ]
-        
+
         def __init__(self,em11=1.0,em12=0.0,em21=0.0,em22=1.0,edx=0.0,edy=0.0,mode=MWT_IDENTITY):
             _EMR_UNKNOWN.__init__(self)
             self.eM11=em11
@@ -1813,7 +1813,7 @@ class _EMR:
         an unsigned int."""
         emr_id=37
         typedef=[('I','handle')]
-        
+
         def __init__(self,dc=None,handle=0):
             _EMR_UNKNOWN.__init__(self)
             self.handle=handle
@@ -1830,7 +1830,7 @@ class _EMR:
             ('i','lopn_unused',0),
             ('i','lopn_color'),
             ]
-        
+
         def __init__(self,style=PS_SOLID,width=1,color=0):
             _EMR_UNKNOWN.__init__(self)
             self.lopn_style=style
@@ -1849,7 +1849,7 @@ class _EMR:
             ('i','lbColor'),
             ('I','lbHatch'),
             ]
-        
+
         def __init__(self,style=BS_SOLID,hatch=HS_HORIZONTAL,color=0):
             _EMR_UNKNOWN.__init__(self)
             self.lbStyle = style
@@ -1874,7 +1874,7 @@ class _EMR:
             ('f','eStartAngle'),
             ('f','eSweepAngle'),
             ]
-        
+
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
 
@@ -1884,7 +1884,7 @@ class _EMR:
         typedef=[
             (Points(num=2),'rclBox'),
             ]
-        
+
         def __init__(self,box=((0,0),(0,0))):
             _EMR_UNKNOWN.__init__(self)
             self.rclBox=[[box[0][0],box[0][1]],[box[1][0],box[1][1]]]
@@ -1902,7 +1902,7 @@ class _EMR:
             ('i','szlCorner_cx'),
             ('i','szlCorner_cy')
             ]
-        
+
         def __init__(self,box=((0,0),(0,0)),cx=0,cy=0):
             _EMR_UNKNOWN.__init__(self)
             self.rclBox=[[box[0][0],box[0][1]],[box[1][0],box[1][1]]]
@@ -1918,7 +1918,7 @@ class _EMR:
             ('i','ptlStart_y'),
             ('i','ptlEnd_x'),
             ('i','ptlEnd_y')]
-        
+
         def __init__(self,box=((0,0),(0,0)),
                      xstart=0,ystart=0,xend=0,yend=0):
             _EMR_UNKNOWN.__init__(self)
@@ -1927,7 +1927,7 @@ class _EMR:
             self.ptlStart_y=ystart
             self.ptlEnd_x=xend
             self.ptlEnd_y=yend
-            
+
 
     class _CHORD(_ARC):
         emr_id=46
@@ -1942,23 +1942,23 @@ class _EMR:
     class _SELECTPALETTE(_EMR_UNKNOWN):
         emr_id=48
         typedef=[('i','handle')]
-        
+
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
-        
+
 
     # Stub class for palette
     class _CREATEPALETTE(_EMR_UNKNOWN):
         emr_id=49
         typedef=[('i','handle',0)]
-        
+
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
-            
+
         def hasHandle(self):
             return True
-        
-            
+
+
 #define EMR_SETPALETTEENTRIES	50
 #define EMR_RESIZEPALETTE	51
 #define EMR_REALIZEPALETTE	52
@@ -1990,7 +1990,7 @@ class _EMR:
         typedef=[('i','iArcDirection')]
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
-        
+
 
 
 #define EMR_SETMITERLIMIT	58
@@ -2082,21 +2082,21 @@ class _EMR:
         emr_id=81
         typedef=[
             (Points(num=2),'rclBounds'),
-            ('i','xDest'), 
-            ('i','yDest'), 
-            ('i','xSrc'), 
-            ('i','ySrc'), 
-            ('i','cxSrc'), 
+            ('i','xDest'),
+            ('i','yDest'),
+            ('i','xSrc'),
+            ('i','ySrc'),
+            ('i','cxSrc'),
             ('i','cySrc'),
             ('i','offBmiSrc'),
-            ('i','cbBmiSrc'), 
-            ('i','offBitsSrc'), 
-            ('i','cbBitsSrc'), 
-            ('i','iUsageSrc'), 
-            ('i','dwRop'), 
-            ('i','cxDest'), 
+            ('i','cbBmiSrc'),
+            ('i','offBitsSrc'),
+            ('i','cbBitsSrc'),
+            ('i','iUsageSrc'),
+            ('i','dwRop'),
+            ('i','cxDest'),
             ('i','cyDest')]
-        
+
         def __init__(self):
             _EMR_UNKNOWN.__init__(self)
 
@@ -2104,7 +2104,7 @@ class _EMR:
     class _EXTCREATEFONTINDIRECTW(_EMR_UNKNOWN):
         # Note: all the strings here (font names, etc.) are unicode
         # strings.
-        
+
         emr_id=82
         typedef=[
             ('i','handle'),
@@ -2273,7 +2273,7 @@ class _EMR:
             (Points(num='cptl',fmt='h'),'aptl'),
             ]
         pass
-    
+
     class _POLYPOLYGON16(_POLYPOLYLINE16):
         emr_id=91
         pass
@@ -2361,7 +2361,7 @@ L{pyemf} for an overview / mini tutorial.
 @group Clipping: SelectClipPath
 @group Text: CreateFont, SetTextAlign, SetTextColor, TextOut
 @group Coordinate System Transformation: SaveDC, RestoreDC, SetWorldTransform, ModifyWorldTransform
-@group **Experimental** -- Viewport Manipulation: SetMapMode, SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx, GetWindowOrgEx, SetViewportExtEx, ScaleViewportExtEx, GetViewportExtEx, SetWindowExtEx, ScaleWindowExtEx, GetWindowExtEx 
+@group **Experimental** -- Viewport Manipulation: SetMapMode, SetViewportOrgEx, GetViewportOrgEx, SetWindowOrgEx, GetWindowOrgEx, SetViewportExtEx, ScaleViewportExtEx, GetViewportExtEx, SetWindowExtEx, ScaleWindowExtEx, GetWindowExtEx
 
 """
 
@@ -2445,7 +2445,7 @@ object, they will be overwritten by the records from this file.
         if self.filename:
             fh=open(self.filename,'rb')
             self._load(fh)
-            
+
     def _load(self,fh):
         self.records=[]
         self._unserialize(fh)
@@ -2471,16 +2471,16 @@ object, they will be overwritten by the records from this file.
 
                     e.unserialize(fh,data,iType,nSize)
                     self.records.append(e)
-                    
+
                     if e.hasHandle():
                         self.dc.addObject(e,e.handle)
                     elif isinstance(e,_EMR._DELETEOBJECT):
                         self.dc.removeObject(e.handle)
-                        
+
                     if self.verbose:
                         print("Unserializing: ", end=' ')
                         print(e)
-                
+
         except EOFError:
             pass
 
@@ -2502,7 +2502,7 @@ to know the number of records, number of handles, bounds, and size of
 the entire metafile before it can be written out, so we have to march
 through all the records and gather info.
         """
-        
+
         end=self.records[-1]
         if not isinstance(end,_EMR._EOF):
             if self.verbose: print("adding EOF record")
@@ -2519,7 +2519,7 @@ through all the records and gather info.
             if self.verbose: print("size=%d total=%d" % (e.nSize,size))
         if self.verbose: print("total: %s bytes" % size)
         header.nBytes=size
-        
+
     def save(self,filename=None):
         """
 Write the EMF to disk.
@@ -2531,10 +2531,10 @@ Write the EMF to disk.
         """
 
         self._end()
-    
+
         if filename:
             self.filename=filename
-            
+
         if self.filename:
             try:
                 fh=open(self.filename,"wb")
@@ -2545,7 +2545,7 @@ Write the EMF to disk.
                 raise
                 return False
         return False
-        
+
     def _serialize(self,fh):
         for e in self.records:
             if self.verbose: print(e)
@@ -2644,7 +2644,7 @@ Write the EMF to disk.
                 points.append(point)
                 count+=1
             polycounts.append(count)
-        
+
         bounds=self._getBounds(points)
         if self._useShort(bounds):
             e=cls16(points,polycounts,bounds)
@@ -2759,7 +2759,7 @@ Create a pen, used to draw lines and path outlines.
 
         """
         return self._appendHandle(_EMR._CREATEPEN(style,width,_normalizeColor(color)))
-        
+
     def CreateSolidBrush(self,color):
         """
 
@@ -2782,11 +2782,11 @@ B{Note:} Currently appears unsupported in OpenOffice.
 
 @param hatch: integer representing type of fill:
  - HS_HORIZONTAL
- - HS_VERTICAL  
- - HS_FDIAGONAL 
- - HS_BDIAGONAL 
- - HS_CROSS     
- - HS_DIAGCROSS 
+ - HS_VERTICAL
+ - HS_FDIAGONAL
+ - HS_BDIAGONAL
+ - HS_CROSS
+ - HS_DIAGCROSS
 @type hatch: int
 @param color: the L{color<RGB>} of the 'on' pixels of the brush.
 @return: handle to brush graphics object.
@@ -2882,7 +2882,7 @@ Device space is the coordinate system of the final output, measured in physical 
         if not self._append(e):
             return 0
         return 1
-        
+
     def SetViewportOrgEx(self,xv,yv):
         """
 
@@ -2895,7 +2895,7 @@ Contrast this with L{SetWindowOrgEx}, which seems to be the opposite
 translation.  So, if in addition, the window origin is set to (xw,yw)
 using L{SetWindowOrgEx}, a pixel drawn at (x,y) will be displayed at
 (x-xw+xv,y-yw+yv) in terms of the original coordinate system.
-        
+
 
 @param xv: new x position of the viewport origin.
 @param yv: new y position of the viewport origin.
@@ -2920,7 +2920,7 @@ Get the origin of the viewport.
 @rtype: 2-tuple (x,y)
         """
         return (self.dc.viewport_x,self.dc.viewport_y)
-    
+
     def SetWindowOrgEx(self,xw,yw):
         """
 
@@ -3088,7 +3088,7 @@ coordinates and (x',y') are the transformed coordinates::
  | x |   | m11 m12 0 |   | x' |
  | y | * | m21 m22 0 | = | y' |
  | 0 |   | dx  dy  1 |   | 0  |
- 
+
 or, the same thing defined as a system of linear equations::
 
  x' = x*m11 + y*m21 + dx
@@ -3117,7 +3117,7 @@ B{Note:} Currently partially supported in OpenOffice.
 
         """
         return self._append(_EMR._SETWORLDTRANSFORM(m11,m12,m21,m22,dx,dy))
-        
+
     def ModifyWorldTransform(self,mode,m11=1.0,m12=0.0,m21=0.0,m22=1.0,dx=0.0,dy=0.0):
         """
 Change the current linear transform.  See L{SetWorldTransform} for a
@@ -3127,7 +3127,7 @@ modified in one of three ways, set by the mode parameter:
  - MWT_IDENTITY: reset the transform to the identity matrix (the matrix parameters are ignored).
  - MWT_LEFTMULTIPLY: multiply the matrix represented by these parameters by the current world transform to get the new transform.
  - MWT_RIGHTMULTIPLY: multiply the current world tranform by the matrix represented here to get the new transform.
- 
+
 The reason that there are two different multiplication types is that
 matrix multiplication is not commutative, which means the order of
 multiplication makes a difference.
@@ -3156,7 +3156,7 @@ B{Note:} Currently appears unsupported in OpenOffice.
 
         """
         return self._append(_EMR._MODIFYWORLDTRANSFORM(m11,m12,m21,m22,dx,dy,mode))
-        
+
 
     def SetPixel(self,x,y,color):
         """
@@ -3183,7 +3183,7 @@ Draw a sequence of connected lines.
 
         """
         return self._appendOptimize16(points,_EMR._POLYLINE16,_EMR._POLYLINE)
-    
+
 
     def PolyPolyline(self,polylines):
         """
@@ -3206,7 +3206,7 @@ to 400,100.
 
         """
         return self._appendOptimizePoly16(polylines,_EMR._POLYPOLYLINE16,_EMR._POLYPOLYLINE)
-    
+
 
     def Polygon(self,points):
         """
@@ -3259,7 +3259,7 @@ not connected to the starting point in each polygon).
 
         """
         return self._appendOptimizePoly16(polygons,_EMR._POLYPOLYGON16,_EMR._POLYPOLYGON)
-    
+
 
     def Ellipse(self,left,top,right,bottom):
         """
@@ -3278,7 +3278,7 @@ Draw an ellipse using the current pen.
 
         """
         return self._append(_EMR._ELLIPSE(((left,top),(right,bottom))))
-        
+
     def Rectangle(self,left,top,right,bottom):
         """
 
@@ -3846,32 +3846,19 @@ other text attributes.
         if not self._append(e):
             return 0
         return 1
- 
+
 
 
 
 
 if __name__ == "__main__":
-    try:
-        from optparse import OptionParser
+    from optparse import OptionParser
 
-        parser=OptionParser(usage="usage: %prog [options] emf-files...")
-        parser.add_option("-v", action="store_true", dest="verbose", default=False)
-        parser.add_option("-s", action="store_true", dest="save", default=False)
-        parser.add_option("-o", action="store", dest="outputfile", default=None)
-        (options, args) = parser.parse_args()
-        # print options
-    except:
-        # hackola to work with Python 2.2, but this shouldn't be a
-        # factor when imported in normal programs because __name__
-        # will never equal "__main__", so this will never get called.
-        class data:
-            verbose=True
-            save=True
-            outputfile=None
-
-        options=data()
-        args=sys.argv[1:]
+    parser=OptionParser(usage="usage: %prog [options] emf-files...")
+    parser.add_option("-v", action="store_true", dest="verbose", default=False)
+    parser.add_option("-s", action="store_true", dest="save", default=False)
+    parser.add_option("-o", action="store", dest="outputfile", default=None)
+    (options, args) = parser.parse_args()
 
     if len(args)>0:
         for filename in args:
