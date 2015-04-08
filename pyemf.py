@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function, division
-
 """
 
 pyemf is a pure python module that provides a cross-platform ability
@@ -238,6 +236,8 @@ paths seem to be supported and are transformed, but text is not
 @version: $version
 """
 
+
+from __future__ import print_function, division
 __extra_epydoc_fields__ = [
                            ('gdi', 'GDI Command', 'GDI Commands'),
                            ('oo', 'OpenOffice Support'),
