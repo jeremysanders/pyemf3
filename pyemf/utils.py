@@ -20,7 +20,8 @@
 
 from __future__ import print_function, division
 
-def RGB(r,g,b):
+
+def RGB(r, g, b):
     """
 Pack integer color values into a 32-bit integer format.
 
@@ -35,19 +36,20 @@ Pack integer color values into a 32-bit integer format.
 
 """
 
-    if isinstance(r,float):
-        r=int(255*r)
+    if isinstance(r, float):
+        r = int(255 * r)
     r = max(0, min(255, r))
 
-    if isinstance(g,float):
-        g=int(255*g)
+    if isinstance(g, float):
+        g = int(255 * g)
     g = max(0, min(255, g))
 
-    if isinstance(b,float):
-        b=int(255*b)
+    if isinstance(b, float):
+        b = int(255 * b)
     b = max(0, min(255, b))
 
-    return (b<<16) | (g<<8) | r
+    return (b << 16) | (g << 8) | r
+
 
 def _normalizeColor(c):
     """
@@ -59,8 +61,9 @@ pass it through L{RGB} to generate the color value.
 @return: packed integer color from L{RGB}
 @rtype: int
 """
-    if isinstance(c,int):
+    if isinstance(c, int):
         return c
-    if isinstance(c,tuple) or isinstance(c,list):
+    if isinstance(c, tuple) or isinstance(c, list):
         return RGB(*c)
-    raise TypeError("Color must be specified as packed integer or 3-tuple (r,g,b)")
+    raise TypeError(
+        "Color must be specified as packed integer or 3-tuple (r,g,b)")

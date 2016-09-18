@@ -27,7 +27,9 @@ from .dc import _DC
 from .utils import _normalizeColor
 from . import emr
 
+
 class EMF:
+
     """
 Reference page of the public API for enhanced metafile creation.  See
 L{pyemf} for an overview / mini tutorial.
@@ -44,8 +46,8 @@ L{pyemf} for an overview / mini tutorial.
 
 """
 
-    def __init__(self,width=6.0,height=4.0,density=300,units="in",
-                 description="pyemf.sf.net",verbose=False):
+    def __init__(self, width=6.0, height=4.0, density=300, units="in",
+                 description="pyemf.sf.net", verbose=False):
         """
 Create an EMF structure in memory.  The size of the resulting image is
 specified in either inches or millimeters depending on the value of
@@ -71,29 +73,30 @@ integer coordinates.
 @type description: string
 
 """
-        self.filename=None
-        self.dc=_DC(width,height,density,units)
-        self.records=[]
+        self.filename = None
+        self.dc = _DC(width, height, density, units)
+        self.records = []
 
         # path recordkeeping
-        self.pathstart=0
+        self.pathstart = 0
 
-        self.verbose=verbose
+        self.verbose = verbose
 
         # if True, scale the image using only the header, and not
         # using MapMode or SetWindow/SetViewport.
-        self.scaleheader=True
+        self.scaleheader = True
 
         hdr = emr._HEADER(description)
         self._append(hdr)
         if not self.scaleheader:
             self.SetMapMode(MM_ANISOTROPIC)
-            self.SetWindowExtEx(self.dc.pixelwidth,self.dc.pixelheight)
+            self.SetWindowExtEx(self.dc.pixelwidth, self.dc.pixelheight)
             self.SetViewportExtEx(
-                int(self.dc.width/100.0*self.dc.ref_pixelwidth/self.dc.ref_width),
-                int(self.dc.height/100.0*self.dc.ref_pixelheight/self.dc.ref_height))
+                int(self.dc.width / 100.0 *
+                    self.dc.ref_pixelwidth / self.dc.ref_width),
+                int(self.dc.height / 100.0 * self.dc.ref_pixelheight / self.dc.ref_height))
 
-    def loadmem(self,membuf=None):
+    def loadmem(self, membuf=None):
         """
 Read an existing buffer from a string of bytes.  If any records exist
 in the current object, they will be overwritten by the records from
@@ -107,7 +110,7 @@ this buffer.
         fh = BytesIO(membuf)
         self._load(fh)
 
-    def load(self,filename=None):
+    def load(self, filename=None):
         """
 Read an existing EMF file.  If any records exist in the current
 object, they will be overwritten by the records from this file.
@@ -118,40 +121,41 @@ object, they will be overwritten by the records from this file.
 @rtype: Boolean
         """
         if filename:
-            self.filename=filename
+            self.filename = filename
 
         if self.filename:
-            fh=open(self.filename,'rb')
+            fh = open(self.filename, 'rb')
             self._load(fh)
 
-    def _load(self,fh):
-        self.records=[]
+    def _load(self, fh):
+        self.records = []
         self._unserialize(fh)
-        self.scaleheader=False
+        self.scaleheader = False
         # get DC from header record
         self.dc.getBounds(self.records[0])
 
-    def _unserialize(self,fh):
+    def _unserialize(self, fh):
         try:
-            count=1
-            while count>0:
-                data=fh.read(8)
-                count=len(data)
-                if count>0:
-                    (iType,nSize)=struct.unpack("<ii",data)
-                    if self.verbose: print("EMF:  iType=%d nSize=%d" % (iType,nSize))
+            count = 1
+            while count > 0:
+                data = fh.read(8)
+                count = len(data)
+                if count > 0:
+                    (iType, nSize) = struct.unpack("<ii", data)
+                    if self.verbose:
+                        print("EMF:  iType=%d nSize=%d" % (iType, nSize))
 
                     if iType in emr._emrmap:
-                        e=emr._emrmap[iType]()
+                        e = emr._emrmap[iType]()
                     else:
-                        e=_EMR_UNKNOWN()
+                        e = _EMR_UNKNOWN()
 
-                    e.unserialize(fh,data,iType,nSize)
+                    e.unserialize(fh, data, iType, nSize)
                     self.records.append(e)
 
                     if e.hasHandle():
-                        self.dc.addObject(e,e.handle)
-                    elif isinstance(e,emr._DELETEOBJECT):
+                        self.dc.addObject(e, e.handle)
+                    elif isinstance(e, emr._DELETEOBJECT):
                         self.dc.removeObject(e.handle)
 
                     if self.verbose:
@@ -161,7 +165,7 @@ object, they will be overwritten by the records from this file.
         except EOFError:
             pass
 
-    def _append(self,e):
+    def _append(self, e):
         """Append an EMR to the record list, unless the record has
         been flagged as having an error."""
         if not e.error:
@@ -180,24 +184,27 @@ the entire metafile before it can be written out, so we have to march
 through all the records and gather info.
         """
 
-        end=self.records[-1]
-        if not isinstance(end,emr._EOF):
-            if self.verbose: print("adding EOF record")
-            e=emr._EOF()
+        end = self.records[-1]
+        if not isinstance(end, emr._EOF):
+            if self.verbose:
+                print("adding EOF record")
+            e = emr._EOF()
             self._append(e)
-        header=self.records[0]
-        header.setBounds(self.dc,self.scaleheader)
-        header.nRecords=len(self.records)
-        header.nHandles=len(self.dc.objects)
-        size=0
+        header = self.records[0]
+        header.setBounds(self.dc, self.scaleheader)
+        header.nRecords = len(self.records)
+        header.nHandles = len(self.dc.objects)
+        size = 0
         for e in self.records:
             e.resize()
-            size+=e.nSize
-            if self.verbose: print("size=%d total=%d" % (e.nSize,size))
-        if self.verbose: print("total: %s bytes" % size)
-        header.nBytes=size
+            size += e.nSize
+            if self.verbose:
+                print("size=%d total=%d" % (e.nSize, size))
+        if self.verbose:
+            print("total: %s bytes" % size)
+        header.nBytes = size
 
-    def save(self,filename=None):
+    def save(self, filename=None):
         """
 Write the EMF to disk.
 
@@ -210,11 +217,11 @@ Write the EMF to disk.
         self._end()
 
         if filename:
-            self.filename=filename
+            self.filename = filename
 
         if self.filename:
             try:
-                fh=open(self.filename,"wb")
+                fh = open(self.filename, "wb")
                 self._serialize(fh)
                 fh.close()
                 return True
@@ -223,37 +230,42 @@ Write the EMF to disk.
                 return False
         return False
 
-    def _serialize(self,fh):
+    def _serialize(self, fh):
         for e in self.records:
-            if self.verbose: print(e)
+            if self.verbose:
+                print(e)
             e.serialize(fh)
 
-    def _create(self,width,height,dots_per_unit,units):
+    def _create(self, width, height, dots_per_unit, units):
         pass
 
-    def _getBounds(self,points):
+    def _getBounds(self, points):
         """Get the bounding rectangle for this list of 2-tuples."""
-        left=points[0][0]
-        right=left
-        top=points[0][1]
-        bottom=top
-        for x,y in points[1:]:
-            if x<left:
-                left=x
-            elif x>right:
-                right=x
-            if y<top:
-                top=y
-            elif y>bottom:
-                bottom=y
-        return ((left,top),(right,bottom))
+        left = points[0][0]
+        right = left
+        top = points[0][1]
+        bottom = top
+        for x, y in points[1:]:
+            if x < left:
+                left = x
+            elif x > right:
+                right = x
+            if y < top:
+                top = y
+            elif y > bottom:
+                bottom = y
+        return ((left, top), (right, bottom))
 
-    def _mergeBounds(self,bounds,itembounds):
+    def _mergeBounds(self, bounds, itembounds):
         if itembounds:
-            if itembounds[0][0]<bounds[0][0]: bounds[0][0]=itembounds[0][0]
-            if itembounds[0][1]<bounds[0][1]: bounds[0][1]=itembounds[0][1]
-            if itembounds[1][0]>bounds[1][0]: bounds[1][0]=itembounds[1][0]
-            if itembounds[1][1]>bounds[1][1]: bounds[1][1]=itembounds[1][1]
+            if itembounds[0][0] < bounds[0][0]:
+                bounds[0][0] = itembounds[0][0]
+            if itembounds[0][1] < bounds[0][1]:
+                bounds[0][1] = itembounds[0][1]
+            if itembounds[1][0] > bounds[1][0]:
+                bounds[1][0] = itembounds[1][0]
+            if itembounds[1][1] > bounds[1][1]:
+                bounds[1][1] = itembounds[1][1]
 
     def _getPathBounds(self):
         """Get the bounding rectangle for the list of EMR records
@@ -261,85 +273,85 @@ Write the EMF to disk.
         # If there are no bounds supplied, default to the EMF standard
         # of ((0,0),(-1,-1)) which means that the bounds aren't
         # precomputed.
-        bounds=[[0,0],[-1,-1]]
+        bounds = [[0, 0], [-1, -1]]
 
         # find the first bounds
-        for i in range(self.pathstart,len(self.records)):
-            #print "FIXME: checking initial bounds on record %d" % i
-            e=self.records[i]
+        for i in range(self.pathstart, len(self.records)):
+            # print "FIXME: checking initial bounds on record %d" % i
+            e = self.records[i]
             # print e
             # print "bounds=%s" % str(e.getBounds())
-            objbounds=e.getBounds()
+            objbounds = e.getBounds()
             if objbounds:
-                #print "bounds=%s" % str(objbounds)
+                # print "bounds=%s" % str(objbounds)
                 # have to copy the object manually because we don't
                 # want to overwrite the object's bounds
-                bounds=[[objbounds[0][0],objbounds[0][1]],
-                        [objbounds[1][0],objbounds[1][1]]]
+                bounds = [[objbounds[0][0], objbounds[0][1]],
+                          [objbounds[1][0], objbounds[1][1]]]
                 break
 
         # if there are more records with bounds, merge them
-        for j in range(i,len(self.records)):
-            #print "FIXME: checking bounds for more records: %d" % j
-            e=self.records[j]
+        for j in range(i, len(self.records)):
+            # print "FIXME: checking bounds for more records: %d" % j
+            e = self.records[j]
             # print e
             # print "bounds=%s" % str(e.getBounds())
-            self._mergeBounds(bounds,e.getBounds())
+            self._mergeBounds(bounds, e.getBounds())
 
         return bounds
 
-    def _useShort(self,bounds):
+    def _useShort(self, bounds):
         """Determine if we can use the shorter 16-bit EMR structures.
         If all the numbers can fit within 16 bit integers, return
         true.  The bounds 4-tuple is (left,top,right,bottom)."""
 
-        SHRT_MIN=-32768
-        SHRT_MAX=32767
-        if bounds[0][0]>=SHRT_MIN and bounds[0][1]>=SHRT_MIN and bounds[1][0]<=SHRT_MAX and bounds[1][1]<=SHRT_MAX:
+        SHRT_MIN = -32768
+        SHRT_MAX = 32767
+        if bounds[0][0] >= SHRT_MIN and bounds[0][1] >= SHRT_MIN and bounds[1][0] <= SHRT_MAX and bounds[1][1] <= SHRT_MAX:
             return True
         return False
 
-    def _appendOptimize16(self,points,cls16,cls):
-        bounds=self._getBounds(points)
+    def _appendOptimize16(self, points, cls16, cls):
+        bounds = self._getBounds(points)
         if self._useShort(bounds):
-            e=cls16(points,bounds)
+            e = cls16(points, bounds)
         else:
-            e=cls(points,bounds)
+            e = cls(points, bounds)
         if not self._append(e):
             return 0
         return 1
 
-    def _appendOptimizePoly16(self,polylist,cls16,cls):
+    def _appendOptimizePoly16(self, polylist, cls16, cls):
         """polylist is a list of lists of points, where each inner
         list represents a single polygon or line.  The number of
         polygons is the size of the outer list."""
-        points=[]
-        polycounts=[]
+        points = []
+        polycounts = []
         for polygon in polylist:
-            count=0
+            count = 0
             for point in polygon:
                 points.append(point)
-                count+=1
+                count += 1
             polycounts.append(count)
 
-        bounds=self._getBounds(points)
+        bounds = self._getBounds(points)
         if self._useShort(bounds):
-            e=cls16(points,polycounts,bounds)
+            e = cls16(points, polycounts, bounds)
         else:
-            e=cls(points,polycounts,bounds)
+            e = cls(points, polycounts, bounds)
         if not self._append(e):
             return 0
         return 1
 
-    def _appendHandle(self,e):
-        handle=self.dc.addObject(e)
+    def _appendHandle(self, e):
+        handle = self.dc.addObject(e)
         if not self._append(e):
             self.dc.popObject()
             return 0
-        e.handle=handle
+        e.handle = handle
         return handle
 
-    def GetStockObject(self,obj):
+    def GetStockObject(self, obj):
         """
 
 Retrieve the handle for a predefined graphics object. Stock objects
@@ -371,11 +383,11 @@ include (at least) the following:
 @type obj: int
 
         """
-        if obj>=0 and obj<=STOCK_LAST:
-            return obj|0x80000000
+        if obj >= 0 and obj <= STOCK_LAST:
+            return obj | 0x80000000
         raise IndexError("Undefined stock object.")
 
-    def SelectObject(self,handle):
+    def SelectObject(self, handle):
         """
 
 Make the given graphics object current.
@@ -389,9 +401,9 @@ Make the given graphics object current.
 @type handle: int
 
         """
-        return self._append(emr._SELECTOBJECT(self.dc,handle))
+        return self._append(emr._SELECTOBJECT(self.dc, handle))
 
-    def DeleteObject(self,handle):
+    def DeleteObject(self, handle):
         """
 
 Delete the given graphics object. Note that, now, only those contexts
@@ -405,11 +417,11 @@ records.
 @type handle: int
 
         """
-        e=emr._DELETEOBJECT(self.dc,handle)
+        e = emr._DELETEOBJECT(self.dc, handle)
         self.dc.removeObject(handle)
         return self._append(e)
 
-    def CreatePen(self,style,width,color):
+    def CreatePen(self, style, width, color):
         """
 
 Create a pen, used to draw lines and path outlines.
@@ -434,9 +446,9 @@ Create a pen, used to draw lines and path outlines.
 @type color: int
 
         """
-        return self._appendHandle(emr._CREATEPEN(style,width,_normalizeColor(color)))
+        return self._appendHandle(emr._CREATEPEN(style, width, _normalizeColor(color)))
 
-    def CreateSolidBrush(self,color):
+    def CreateSolidBrush(self, color):
         """
 
 Create a solid brush used to fill polygons.
@@ -449,7 +461,7 @@ Create a solid brush used to fill polygons.
         """
         return self._appendHandle(emr._CREATEBRUSHINDIRECT(color=_normalizeColor(color)))
 
-    def CreateHatchBrush(self,hatch,color):
+    def CreateHatchBrush(self, hatch, color):
         """
 
 Create a hatched brush used to fill polygons.
@@ -471,9 +483,9 @@ B{Note:} Currently appears unsupported in OpenOffice.
 @type color: int
 
         """
-        return self._appendHandle(emr._CREATEBRUSHINDIRECT(hatch=hatch,color=_normalizeColor(color)))
+        return self._appendHandle(emr._CREATEBRUSHINDIRECT(hatch=hatch, color=_normalizeColor(color)))
 
-    def SetBkColor(self,color):
+    def SetBkColor(self, color):
         """
 
 Set the background color used for any transparent regions in fills or
@@ -487,12 +499,12 @@ B{Note:} Currently appears sporadically supported in OpenOffice.
 @type color: int
 
         """
-        e=emr._SETBKCOLOR(_normalizeColor(color))
+        e = emr._SETBKCOLOR(_normalizeColor(color))
         if not self._append(e):
             return 0
         return 1
 
-    def SetBkMode(self,mode):
+    def SetBkMode(self, mode):
         """
 
 Set the background mode for interaction between transparent areas in
@@ -510,12 +522,12 @@ B{Note:} Currently appears sporadically supported in OpenOffice.
 @type mode: int
 
         """
-        e=emr._SETBKMODE(mode)
+        e = emr._SETBKMODE(mode)
         if not self._append(e):
             return 0
         return 1
 
-    def SetPolyFillMode(self,mode):
+    def SetPolyFillMode(self, mode):
         """
 
 Set the polygon fill mode.  Generally these modes produce
@@ -530,12 +542,12 @@ other edges.
 @type mode: int
 
         """
-        e=emr._SETPOLYFILLMODE(mode)
+        e = emr._SETPOLYFILLMODE(mode)
         if not self._append(e):
             return 0
         return 1
 
-    def SetMapMode(self,mode):
+    def SetMapMode(self, mode):
         """
 
 Set the window mapping mode.  This is the mapping between pixels in page space to pixels in device space.  Page space is the coordinate system that is used for all the drawing commands -- it is how pixels are identified and figures are placed in the metafile.  They are integer units.
@@ -554,12 +566,12 @@ Device space is the coordinate system of the final output, measured in physical 
 @rtype: int
 @type mode: int
         """
-        e=emr._SETMAPMODE(mode)
+        e = emr._SETMAPMODE(mode)
         if not self._append(e):
             return 0
         return 1
 
-    def SetViewportOrgEx(self,xv,yv):
+    def SetViewportOrgEx(self, xv, yv):
         """
 
 Set the origin of the viewport, which translates the origin of the
@@ -579,12 +591,12 @@ using L{SetWindowOrgEx}, a pixel drawn at (x,y) will be displayed at
 @type xv: int
 @type yv: int
         """
-        e=emr._SETVIEWPORTORGEX(xv,yv)
+        e = emr._SETVIEWPORTORGEX(xv, yv)
         if not self._append(e):
             return None
-        old=(self.dc.viewport_x,self.dc.viewport_y)
-        self.dc.viewport_x=xv
-        self.dc.viewport_y=yv
+        old = (self.dc.viewport_x, self.dc.viewport_y)
+        self.dc.viewport_x = xv
+        self.dc.viewport_y = yv
         return old
 
     def GetViewportOrgEx(self):
@@ -594,9 +606,9 @@ Get the origin of the viewport.
 @return: returns the current viewport origin.
 @rtype: 2-tuple (x,y)
         """
-        return (self.dc.viewport_x,self.dc.viewport_y)
+        return (self.dc.viewport_x, self.dc.viewport_y)
 
-    def SetWindowOrgEx(self,xw,yw):
+    def SetWindowOrgEx(self, xw, yw):
         """
 
 Set the origin of the window, which translates the origin of the
@@ -617,12 +629,12 @@ system.
 @type xw: int
 @type yw: int
         """
-        e=emr._SETWINDOWORGEX(xw,yw)
+        e = emr._SETWINDOWORGEX(xw, yw)
         if not self._append(e):
             return None
-        old=(self.dc.window_x,self.dc.window_y)
-        self.dc.window_x=xw
-        self.dc.window_y=yw
+        old = (self.dc.window_x, self.dc.window_y)
+        self.dc.window_x = xw
+        self.dc.window_y = yw
         return old
 
     def GetWindowOrgEx(self):
@@ -633,9 +645,9 @@ Get the origin of the window.
 @rtype: 2-tuple (x,y)
 
         """
-        return (self.dc.window_x,self.dc.window_y)
+        return (self.dc.window_x, self.dc.window_y)
 
-    def SetViewportExtEx(self,x,y):
+    def SetViewportExtEx(self, x, y):
         """
 Set the dimensions of the viewport in device units.  Device units are
 physical dimensions, in millimeters.  The total extent is equal to the
@@ -652,15 +664,15 @@ MM_ISOTROPIC or MM_ANISOTROPIC.
 @type x: int
 @type y: int
         """
-        e=emr._SETVIEWPORTEXTEX(x,y)
+        e = emr._SETVIEWPORTEXTEX(x, y)
         if not self._append(e):
             return None
-        old=(self.dc.viewport_ext_x,self.dc.viewport_ext_y)
-        self.dc.viewport_ext_x=xv
-        self.dc.viewport_ext_y=yv
+        old = (self.dc.viewport_ext_x, self.dc.viewport_ext_y)
+        self.dc.viewport_ext_x = xv
+        self.dc.viewport_ext_y = yv
         return old
 
-    def ScaleViewportExtEx(self,x_num,x_den,y_num,y_den):
+    def ScaleViewportExtEx(self, x_num, x_den, y_num, y_den):
         """
 
 Scale the dimensions of the viewport.
@@ -675,12 +687,12 @@ Scale the dimensions of the viewport.
 @type y_num: int
 @type y_den: int
         """
-        e=emr._SCALEVIEWPORTEXTEX(x_num,x_den,y_num,y_den)
+        e = emr._SCALEVIEWPORTEXTEX(x_num, x_den, y_num, y_den)
         if not self._append(e):
             return None
-        old=(self.dc.viewport_ext_x,self.dc.viewport_ext_y)
-        self.dc.viewport_ext_x=old[0]*x_num/x_den
-        self.dc.viewport_ext_y=old[1]*y_num/y_den
+        old = (self.dc.viewport_ext_x, self.dc.viewport_ext_y)
+        self.dc.viewport_ext_x = old[0] * x_num / x_den
+        self.dc.viewport_ext_y = old[1] * y_num / y_den
         return old
 
     def GetViewportExtEx(self):
@@ -691,10 +703,10 @@ Get the dimensions of the viewport in device units (i.e. physical dimensions).
 @rtype: 2-tuple (width,height)
 
         """
-        old=(self.dc.viewport_ext_x,self.dc.viewport_ext_y)
+        old = (self.dc.viewport_ext_x, self.dc.viewport_ext_y)
         return old
 
-    def SetWindowExtEx(self,x,y):
+    def SetWindowExtEx(self, x, y):
         """
 
 Set the dimensions of the window.  Window size is measured in integer
@@ -710,15 +722,15 @@ MM_ISOTROPIC or MM_ANISOTROPIC.
 @type x: int
 @type y: int
         """
-        e=emr._SETWINDOWEXTEX(x,y)
+        e = emr._SETWINDOWEXTEX(x, y)
         if not self._append(e):
             return None
-        old=(self.dc.window_ext_x,self.dc.window_ext_y)
-        self.dc.window_ext_x=x
-        self.dc.window_ext_y=y
+        old = (self.dc.window_ext_x, self.dc.window_ext_y)
+        self.dc.window_ext_x = x
+        self.dc.window_ext_y = y
         return old
 
-    def ScaleWindowExtEx(self,x_num,x_den,y_num,y_den):
+    def ScaleWindowExtEx(self, x_num, x_den, y_num, y_den):
         """
 
 Scale the dimensions of the window.
@@ -733,12 +745,12 @@ Scale the dimensions of the window.
 @type y_num: int
 @type y_den: int
         """
-        e=emr._SCALEWINDOWEXTEX(x_num,x_den,y_num,y_den)
+        e = emr._SCALEWINDOWEXTEX(x_num, x_den, y_num, y_den)
         if not self._append(e):
             return None
-        old=(self.dc.window_ext_x,self.dc.window_ext_y)
-        self.dc.window_ext_x=old[0]*x_num/x_den
-        self.dc.window_ext_y=old[1]*y_num/y_den
+        old = (self.dc.window_ext_x, self.dc.window_ext_y)
+        self.dc.window_ext_x = old[0] * x_num / x_den
+        self.dc.window_ext_y = old[1] * y_num / y_den
         return old
 
     def GetWindowExtEx(self):
@@ -748,10 +760,10 @@ Get the dimensions of the window in logical units (integer numbers of pixels).
 @return: returns the size of the window.
 @rtype: 2-tuple (width,height)
         """
-        old=(self.dc.window_ext_x,self.dc.window_ext_y)
+        old = (self.dc.window_ext_x, self.dc.window_ext_y)
         return old
 
-    def SetWorldTransform(self,m11=1.0,m12=0.0,m21=0.0,m22=1.0,dx=0.0,dy=0.0):
+    def SetWorldTransform(self, m11=1.0, m12=0.0, m21=0.0, m22=1.0, dx=0.0, dy=0.0):
         """
 Set the world coordinate to logical coordinate linear transform for
 subsequent operations.  With this matrix operation, you can translate,
@@ -790,9 +802,9 @@ B{Note:} Currently partially supported in OpenOffice.
 @rtype: boolean
 
         """
-        return self._append(emr._SETWORLDTRANSFORM(m11,m12,m21,m22,dx,dy))
+        return self._append(emr._SETWORLDTRANSFORM(m11, m12, m21, m22, dx, dy))
 
-    def ModifyWorldTransform(self,mode,m11=1.0,m12=0.0,m21=0.0,m22=1.0,dx=0.0,dy=0.0):
+    def ModifyWorldTransform(self, mode, m11=1.0, m12=0.0, m21=0.0, m22=1.0, dx=0.0, dy=0.0):
         """
 Change the current linear transform.  See L{SetWorldTransform} for a
 description of the matrix parameters.  The new transform may be
@@ -829,9 +841,9 @@ B{Note:} Currently appears unsupported in OpenOffice.
 @rtype: boolean
 
         """
-        return self._append(emr._MODIFYWORLDTRANSFORM(m11,m12,m21,m22,dx,dy,mode))
+        return self._append(emr._MODIFYWORLDTRANSFORM(m11, m12, m21, m22, dx, dy, mode))
 
-    def SetPixel(self,x,y,color):
+    def SetPixel(self, x, y, color):
         """
 
 Set the pixel to the given color.
@@ -843,9 +855,9 @@ Set the pixel to the given color.
 @type color: int or (r,g,b) tuple
 
         """
-        return self._append(emr._SETPIXELV(x,y,_normalizeColor(color)))
+        return self._append(emr._SETPIXELV(x, y, _normalizeColor(color)))
 
-    def Polyline(self,points):
+    def Polyline(self, points):
         """
 
 Draw a sequence of connected lines.
@@ -855,9 +867,9 @@ Draw a sequence of connected lines.
 @type points: tuple
 
         """
-        return self._appendOptimize16(points,emr._POLYLINE16,emr._POLYLINE)
+        return self._appendOptimize16(points, emr._POLYLINE16, emr._POLYLINE)
 
-    def PolyPolyline(self,polylines):
+    def PolyPolyline(self, polylines):
         """
 
 Draw multiple polylines.  The polylines argument is a list of lists,
@@ -877,9 +889,9 @@ to 400,100.
 @rtype: int
 
         """
-        return self._appendOptimizePoly16(polylines,emr._POLYPOLYLINE16,emr._POLYPOLYLINE)
+        return self._appendOptimizePoly16(polylines, emr._POLYPOLYLINE16, emr._POLYPOLYLINE)
 
-    def Polygon(self,points):
+    def Polygon(self, points):
         """
 
 Draw a closed figure bounded by straight line segments.  A polygon is
@@ -896,16 +908,18 @@ when an overlapping polygon is defined.
 @type points: tuple
 
         """
-        if len(points)==4:
-            if points[0][0]==points[1][0] and points[2][0]==points[3][0] and points[0][1]==points[3][1] and points[1][1]==points[2][1]:
-                if self.verbose: print("converting to rectangle, option 1:")
-                return self.Rectangle(points[0][0],points[0][1],points[2][0],points[2][1])
-            elif points[0][1]==points[1][1] and points[2][1]==points[3][1] and points[0][0]==points[3][0] and points[1][0]==points[2][0]:
-                if self.verbose: print("converting to rectangle, option 2:")
-                return self.Rectangle(points[0][0],points[0][1],points[2][0],points[2][1])
-        return self._appendOptimize16(points,emr._POLYGON16,emr._POLYGON)
+        if len(points) == 4:
+            if points[0][0] == points[1][0] and points[2][0] == points[3][0] and points[0][1] == points[3][1] and points[1][1] == points[2][1]:
+                if self.verbose:
+                    print("converting to rectangle, option 1:")
+                return self.Rectangle(points[0][0], points[0][1], points[2][0], points[2][1])
+            elif points[0][1] == points[1][1] and points[2][1] == points[3][1] and points[0][0] == points[3][0] and points[1][0] == points[2][0]:
+                if self.verbose:
+                    print("converting to rectangle, option 2:")
+                return self.Rectangle(points[0][0], points[0][1], points[2][0], points[2][1])
+        return self._appendOptimize16(points, emr._POLYGON16, emr._POLYGON)
 
-    def PolyPolygon(self,polygons):
+    def PolyPolygon(self, polygons):
         """
 
 Draw multiple polygons.  The polygons argument is a list of lists,
@@ -928,9 +942,9 @@ not connected to the starting point in each polygon).
 @rtype: int
 
         """
-        return self._appendOptimizePoly16(polygons,emr._POLYPOLYGON16,emr._POLYPOLYGON)
+        return self._appendOptimizePoly16(polygons, emr._POLYPOLYGON16, emr._POLYPOLYGON)
 
-    def Ellipse(self,left,top,right,bottom):
+    def Ellipse(self, left, top, right, bottom):
         """
 
 Draw an ellipse using the current pen.
@@ -946,9 +960,9 @@ Draw an ellipse using the current pen.
 @type bottom: int
 
         """
-        return self._append(emr._ELLIPSE(((left,top),(right,bottom))))
+        return self._append(emr._ELLIPSE(((left, top), (right, bottom))))
 
-    def Rectangle(self,left,top,right,bottom):
+    def Rectangle(self, left, top, right, bottom):
         """
 
 Draw a rectangle using the current pen.
@@ -964,9 +978,9 @@ Draw a rectangle using the current pen.
 @type bottom: int
 
         """
-        return self._append(emr._RECTANGLE(((left,top),(right,bottom))))
+        return self._append(emr._RECTANGLE(((left, top), (right, bottom))))
 
-    def RoundRect(self,left,top,right,bottom,cornerwidth,cornerheight):
+    def RoundRect(self, left, top, right, bottom, cornerwidth, cornerheight):
         """
 
 Draw a rectangle with rounded corners using the current pen.
@@ -986,10 +1000,10 @@ Draw a rectangle with rounded corners using the current pen.
 @type cornerheight: int
 
         """
-        return self._append(emr._ROUNDRECT((((left,top),(right,bottom)),
-                                           cornerwidth,cornerheight)))
+        return self._append(emr._ROUNDRECT((((left, top), (right, bottom)),
+                                           cornerwidth, cornerheight)))
 
-    def Arc(self,left,top,right,bottom,xstart,ystart,xend,yend):
+    def Arc(self, left, top, right, bottom, xstart, ystart, xend, yend):
         """
 
 Draw an arc of an ellipse.  The ellipse is specified by its bounding
@@ -1023,10 +1037,10 @@ rays are coincident, a complete ellipse is drawn.
 @type yend: int
 
         """
-        return self._append(emr._ARC(((left,top),(right,bottom)),
-                                    xstart,ystart,xend,yend))
+        return self._append(emr._ARC(((left, top), (right, bottom)),
+                                     xstart, ystart, xend, yend))
 
-    def Chord(self,left,top,right,bottom,xstart,ystart,xend,yend):
+    def Chord(self, left, top, right, bottom, xstart, ystart, xend, yend):
         """
 
 Draw a chord of an ellipse.  A chord is a closed region bounded by an
@@ -1053,10 +1067,10 @@ start and end.  The arc start and end points are defined as in L{Arc}.
 @type yend: int
 
         """
-        return self._append(emr._CHORD(((left,top),(right,bottom)),
-                                    xstart,ystart,xend,yend))
+        return self._append(emr._CHORD(((left, top), (right, bottom)),
+                                       xstart, ystart, xend, yend))
 
-    def Pie(self,left,top,right,bottom,xstart,ystart,xend,yend):
+    def Pie(self, left, top, right, bottom, xstart, ystart, xend, yend):
         """
 
 Draw a pie slice of an ellipse.  The ellipse is specified as in
@@ -1082,15 +1096,16 @@ L{Arc}, and it is filled with the current brush.
 @type yend: int
 
         """
-        if xstart==xend and ystart==yend:
+        if xstart == xend and ystart == yend:
             # Fix for OpenOffice: doesn't render a full ellipse when
             # the start and end angles are the same
-            e=emr._ELLIPSE(((left,top),(right,bottom)))
+            e = emr._ELLIPSE(((left, top), (right, bottom)))
         else:
-            e=emr._PIE(((left,top),(right,bottom)),xstart,ystart,xend,yend)
+            e = emr._PIE(
+                ((left, top), (right, bottom)), xstart, ystart, xend, yend)
         return self._append(e)
 
-    def PolyBezier(self,points):
+    def PolyBezier(self, points):
         """
 
 Draw cubic Bezier curves using the list of points as both endpoints
@@ -1107,7 +1122,7 @@ curve.
 @type points: tuple
 
         """
-        return self._appendOptimize16(points,emr._POLYBEZIER16,emr._POLYBEZIER)
+        return self._appendOptimize16(points, emr._POLYBEZIER16, emr._POLYBEZIER)
 
     def BeginPath(self):
         """
@@ -1118,7 +1133,7 @@ Begin defining a path.  Any previous unclosed paths are discarded.
 
         """
         # record next record number as first item in path
-        self.pathstart=len(self.records)
+        self.pathstart = len(self.records)
         return self._append(emr._BEGINPATH())
 
     def EndPath(self):
@@ -1131,7 +1146,7 @@ End the path definition.
         """
         return self._append(emr._ENDPATH())
 
-    def MoveTo(self,x,y):
+    def MoveTo(self, x, y):
         """
 
 Move the current point to the given position and implicitly begin a
@@ -1144,9 +1159,9 @@ new figure or path.
 @type x: int
 @type y: int
         """
-        return self._append(emr._MOVETOEX(x,y))
+        return self._append(emr._MOVETOEX(x, y))
 
-    def LineTo(self,x,y):
+    def LineTo(self, x, y):
         """
 
 Draw a straight line using the current pen from the current point to
@@ -1160,9 +1175,9 @@ the given position.
 @type y: int
 
         """
-        return self._append(emr._LINETO(x,y))
+        return self._append(emr._LINETO(x, y))
 
-    def PolylineTo(self,points):
+    def PolylineTo(self, points):
         """
 
 Draw a sequence of connected lines starting from the current
@@ -1174,9 +1189,9 @@ position and update the position to the final point in the list.
 @type points: tuple
 
         """
-        return self._appendOptimize16(points,emr._POLYLINETO16,emr._POLYLINETO)
+        return self._appendOptimize16(points, emr._POLYLINETO16, emr._POLYLINETO)
 
-    def ArcTo(self,left,top,right,bottom,xstart,ystart,xend,yend):
+    def ArcTo(self, left, top, right, bottom, xstart, ystart, xend, yend):
         """
 
 Draw an arc and update the current position.  The arc is drawn as
@@ -1207,10 +1222,10 @@ B{Note:} Currently appears unsupported in OpenOffice.
 @type yend: int
 
         """
-        return self._append(emr._ARCTO(((left,top),(right,bottom)),
-                                    xstart,ystart,xend,yend))
+        return self._append(emr._ARCTO(((left, top), (right, bottom)),
+                                       xstart, ystart, xend, yend))
 
-    def PolyBezierTo(self,points):
+    def PolyBezierTo(self, points):
         """
 
 Draw cubic Bezier curves, as described in L{PolyBezier}, but in
@@ -1225,7 +1240,7 @@ L{PolylineTo}, etc. will follow from the end of the curve.
 @type points: tuple
 
         """
-        return self._appendOptimize16(points,emr._POLYBEZIERTO16,emr._POLYBEZIERTO)
+        return self._appendOptimize16(points, emr._POLYBEZIERTO16, emr._POLYBEZIERTO)
 
     def CloseFigure(self):
         """
@@ -1249,7 +1264,7 @@ selected brush and polygon fill mode.
 @rtype: int
 
         """
-        bounds=self._getPathBounds()
+        bounds = self._getPathBounds()
         return self._append(emr._FILLPATH(bounds))
 
     def StrokePath(self):
@@ -1262,7 +1277,7 @@ selected pen.
 @rtype: int
 
         """
-        bounds=self._getPathBounds()
+        bounds = self._getPathBounds()
         return self._append(emr._STROKEPATH(bounds))
 
     def StrokeAndFillPath(self):
@@ -1280,10 +1295,10 @@ B{Note:} Supported in OpenOffice 2.*, unsupported in OpenOffice 1.*.
 @rtype: int
 
         """
-        bounds=self._getPathBounds()
+        bounds = self._getPathBounds()
         return self._append(emr._STROKEANDFILLPATH(bounds))
 
-    def SelectClipPath(self,mode=RGN_COPY):
+    def SelectClipPath(self, mode=RGN_COPY):
         """
 
 Use the current path as the clipping path.  The current path must be a
@@ -1321,7 +1336,7 @@ bounding rectangle of the path as the clip area, not the path itself.
         """
         return self._append(emr._SAVEDC())
 
-    def RestoreDC(self,stackid):
+    def RestoreDC(self, stackid):
         """
 
 Restores the state of the graphics mode to a stack.  The L{stackid}
@@ -1343,7 +1358,7 @@ bounding rectangle of the path as the clip area, not the path itself.
         """
         return self._append(emr._RESTOREDC(-1))
 
-    def SetTextAlign(self,alignment):
+    def SetTextAlign(self, alignment):
         """
 
 Set the subsequent alignment of drawn text. You can also pass a flag
@@ -1366,7 +1381,7 @@ text. Alignment may have the (sum of) values:
         """
         return self._append(emr._SETTEXTALIGN(alignment))
 
-    def SetTextColor(self,color):
+    def SetTextColor(self, color):
         """
 
 Set the text foreground color.
@@ -1376,12 +1391,12 @@ Set the text foreground color.
 @type color: int
 
         """
-        e=emr._SETTEXTCOLOR(_normalizeColor(color))
+        e = emr._SETTEXTCOLOR(_normalizeColor(color))
         if not self._append(e):
             return 0
         return 1
 
-    def CreateFont(self,height,width=0,escapement=0,orientation=0,weight=FW_NORMAL,italic=0,underline=0,strike_out=0,charset=ANSI_CHARSET,out_precision=OUT_DEFAULT_PRECIS,clip_precision=CLIP_DEFAULT_PRECIS,quality=DEFAULT_QUALITY,pitch_family=DEFAULT_PITCH|FF_DONTCARE,name='Times New Roman'):
+    def CreateFont(self, height, width=0, escapement=0, orientation=0, weight=FW_NORMAL, italic=0, underline=0, strike_out=0, charset=ANSI_CHARSET, out_precision=OUT_DEFAULT_PRECIS, clip_precision=CLIP_DEFAULT_PRECIS, quality=DEFAULT_QUALITY, pitch_family=DEFAULT_PITCH | FF_DONTCARE, name='Times New Roman'):
         """
 
 Create a new font object. Presumably, when rendering the EMF the
@@ -1495,11 +1510,11 @@ values:
         """
         return self._appendHandle(
             emr._EXTCREATEFONTINDIRECTW(
-                height,width,escapement,orientation,weight,italic,
-                underline,strike_out,charset,out_precision,
-                clip_precision,quality,pitch_family,name))
+                height, width, escapement, orientation, weight, italic,
+                underline, strike_out, charset, out_precision,
+                clip_precision, quality, pitch_family, name))
 
-    def TextOut(self,x,y,text):
+    def TextOut(self, x, y, text):
         """
 
 Draw a string of text at the given position using the current FONT and
@@ -1515,7 +1530,7 @@ other text attributes.
 @type text: string
 
         """
-        e=emr._EXTTEXTOUTA(x,y,text)
+        e = emr._EXTTEXTOUTA(x, y, text)
         if not self._append(e):
             return 0
         return 1
