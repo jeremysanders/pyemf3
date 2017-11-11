@@ -836,9 +836,9 @@ class _EXTTEXTOUTA(_EMR_UNKNOWN):
             self.string = txt.encode('utf-16le')
         else:
             self.string = txt
+        #self.nChars = 0#len(self.string)
         self.charsize = 1
         self.dx = []
-
 
 @register
 class _EXTTEXTOUTW(_EXTTEXTOUTA):
