@@ -16,7 +16,7 @@ for i in range(16):
 for i in range(16):
     emf.SelectObject(pen[i])
     x1=0
-    x2=width*dpi/2
+    x2=width*dpi//2
     y=i*32
     emf.Polyline([(x1,y),(x2,y)])
 
@@ -30,7 +30,7 @@ for i in range(16):
 
 for i in range(16):
     emf.SelectObject(pen[i])
-    x1=width*dpi/2
+    x1=width*dpi//2
     x2=width*dpi
     y=i*32
     emf.Polyline([(x1,y),(x2,y)])

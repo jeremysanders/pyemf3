@@ -5,7 +5,7 @@ import pyemf
 def path(emf,text,x,y,size=300):
     emf.TextOut(x,y,text);
     y+=50
-    
+
     emf.BeginPath()
     emf.MoveTo(x,y)
     emf.LineTo(x+100,y+300)
@@ -32,7 +32,7 @@ emf.SelectObject(dashed)
 
 emf.SetBkMode(pyemf.TRANSPARENT)
 # set baseline for text to be top left corner
-emf.SetTextAlign(pyemf.TA_TOP|pyemf.TA_LEFT) 
+emf.SetTextAlign(pyemf.TA_TOP|pyemf.TA_LEFT)
 emf.SetTextColor((0,0,0))
 font = emf.CreateFont( -50, 0, 0, 0, pyemf.FW_NORMAL, 0, 0, 0,
                        pyemf.ANSI_CHARSET, pyemf.OUT_TT_PRECIS,
@@ -63,4 +63,3 @@ emf.StrokeAndFillPath()
 
 ret=emf.save("test-paths1.emf")
 print("save returns %s" % str(ret))
-

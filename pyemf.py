@@ -1115,9 +1115,9 @@ class RecordFormat:
         size=0
         for name in self.names:
             fmt=self.fmtmap[name]
-            bytes=fmt.calcNumBytes(obj,name)
-            if self.debug: print("calcNumBytes: %s=%d" % (name,bytes))
-            size+=bytes
+            nbytes=fmt.calcNumBytes(obj,name)
+            if self.debug: print("calcNumBytes: %s=%d" % (name,nbytes))
+            size+=nbytes
         return size
 
     def unpack(self,data,obj,initptr=0):
@@ -1210,7 +1210,6 @@ class Record(object):
 
         # list of values parsed from the input stream
         self.values=self.__class__.format.getDefaults()
-
 
     def __getattr__(self,name):
         """Return EMR attribute if the name exists in the typedef list
@@ -1329,8 +1328,8 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
 
     def __init__(self):
         Record.__init__(self)
-        self.iType=self.__class__.emr_id
         self.nSize=0
+        self.iType=self.__class__.emr_id
 
         self.verbose=False
 
@@ -1384,19 +1383,19 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
     def serialize(self,fh):
         try:
             #print "packing!"
-            bytes=self.format.pack(self.values,self,8)
+            bytestr=self.format.pack(self.values,self,8)
             #fh.write(struct.pack(self.format.fmt,*self.values))
         except struct.error:
             print("!!!!!Struct error:", end=' ')
             print(self)
             raise
         before=self.nSize
-        self.nSize=8+len(bytes)+self.sizeExtra()
+        self.nSize=8+len(bytestr)+self.sizeExtra()
         if self.verbose and before!=self.nSize:
             print("resize: before=%d after=%d" % (before,self.nSize), end=' ')
             print(self)
         if self.nSize%4 != 0:
-            print("size error--must be divisible by 4. before=%d after=%d calcNumBytes=%d extra=%d" % (before,self.nSize,len(bytes),self.sizeExtra()))
+            print("size error--must be divisible by 4. before=%d after=%d calcNumBytes=%d extra=%d" % (before,self.nSize,len(bytestr),self.sizeExtra()))
             for name in self.format.names:
                 fmt=self.format.fmtmap[name]
                 size=fmt.calcNumBytes(self,name)
@@ -1404,7 +1403,7 @@ class _EMR_UNKNOWN(Record): # extend from new-style class, or __getattr__ doesn'
             print(self)
             raise TypeError
         fh.write(struct.pack("<ii",self.iType,self.nSize))
-        fh.write(bytes)
+        fh.write(bytestr)
         self.serializeExtra(fh)
 
     def serializeExtra(self,fh):
@@ -2187,9 +2186,9 @@ class _EMR:
             ('i','iGraphicsMode',GM_COMPATIBLE),
             ('f','exScale',1.0),
             ('f','eyScale',1.0),
-            ('i','ptlReference_x'),
-            ('i','ptlReference_y'),
-            ('i','nChars'),
+            ('i','ptlReference_x',1),
+            ('i','ptlReference_y',1),
+            ('i','nChars',1),
             ('i','offString',0),
             ('i','fOptions',0),
             (Points(num=2),'rcl',[[0,0],[-1,-1]]),
