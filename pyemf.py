@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 
@@ -237,7 +237,6 @@ paths seem to be supported and are transformed, but text is not
 """
 
 
-from __future__ import print_function, division
 __extra_epydoc_fields__ = [
                            ('gdi', 'GDI Command', 'GDI Commands'),
                            ('oo', 'OpenOffice Support'),
@@ -249,16 +248,7 @@ import re
 import struct
 import copy
 import inspect
-
-# python 2/3 compatibility helpers
-is_py3 = sys.version_info[0] == 3
-if is_py3:
-    from io import BytesIO, StringIO
-    cunicode = str
-else:
-    from cStringIO import StringIO
-    BytesIO = StringIO
-    cunicode = unicode
+from io import BytesIO, StringIO
 
 # setup.py requires that these be defined, and the OnceAndOnlyOnce
 # principle is used here.  This is the only place where these values
@@ -1283,6 +1273,8 @@ class EMFString(Field):
         size=_round4(len(txt))
         if self.size==2:
             txt=txt.decode('utf-16le') # Now is a unicode string
+        else:
+            txt = txt.decode('ascii')
         if self.debug:
             try:
                 print("str: '%s'" % str(txt))
@@ -1292,7 +1284,7 @@ class EMFString(Field):
 
     def pack(self,obj,name,value):
         txt=value
-        if isinstance(txt, cunicode):
+        if isinstance(txt, str):
             txt = txt.encode('utf-16le')
         if self.hasNumReference():
             extra=_round4(len(txt))-len(txt) # must be multiple of 4
@@ -2180,6 +2172,7 @@ class _EMR:
 
 
     class _EXTTEXTOUTA(_EMR_UNKNOWN):
+        """ASCII-encoded text."""
         emr_id=83
         typedef=[
             (Points(num=2),'rclBounds',[[0,0],[-1,-1]]),
@@ -2196,19 +2189,17 @@ class _EMR:
             (List(num='nChars',fmt='i',offset='offDx'),'dx'),
             (EMFString(num='nChars',size=1,offset='offString'),'string'),
             ]
-        def __init__(self,x=0,y=0,txt=""):
+        def __init__(self,x=0,y=0,txt=b""):
             _EMR_UNKNOWN.__init__(self)
             self.ptlReference_x=x
             self.ptlReference_y=y
-            if isinstance(txt,cunicode):
-                self.string=txt.encode('utf-16le')
-            else:
-                self.string=txt
+            self.string = txt
             self.charsize=1
             self.dx=[]
 
 
     class _EXTTEXTOUTW(_EXTTEXTOUTA):
+        """UTF-16le-encoded text."""
         emr_id=84
         typedef=[
             (Points(num=2),'rclBounds',[[0,0],[-1,-1]]),
@@ -2226,7 +2217,7 @@ class _EMR:
             (EMFString(num='nChars',size=2,offset='offString'),'string'),
             ]
 
-        def __init__(self,x=0,y=0,txt=u''):
+        def __init__(self,x=0,y=0,txt=b''):
             _EMR._EXTTEXTOUTA.__init__(self,x,y,txt)
             self.charsize=2
 
@@ -3841,14 +3832,18 @@ other text attributes.
 @type text: string
 
         """
-        e=_EMR._EXTTEXTOUTA(x,y,text)
+
+        # ascii or unicode?
+        try:
+            encoded = text.encode('ascii')
+            e = _EMR._EXTTEXTOUTA(x, y, encoded)
+        except UnicodeEncodeError:
+            encoded = text.encode('utf-16le')
+            e = _EMR._EXTTEXTOUTW(x, y, encoded)
+
         if not self._append(e):
             return 0
         return 1
-
-
-
-
 
 if __name__ == "__main__":
     from optparse import OptionParser

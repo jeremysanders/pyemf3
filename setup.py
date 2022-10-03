@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Relatively generic setup.py that should be easily tailorable to
 # other python modules.  It gets most of the parameters from the
