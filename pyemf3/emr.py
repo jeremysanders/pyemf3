@@ -1025,7 +1025,43 @@ class CREATEDIBPATTERNBRUSHPT(CREATEPALETTE):
 @register_emr
 class EXTCREATEPEN(CREATEPALETTE):
     emr_id=95
-    pass
+
+    typedef = [
+        ('i','handle',0),
+        ('i','offBmi',0),
+        ('i','cbBmi',0),
+        ('i','offBits',0),
+        ('i','cbBits',0),
+        ('i','style'),
+        ('i','penwidth'),
+        ('i','brushstyle'),
+        ('i','color'),
+        ('i','brushhatch',0),
+        ('i','numstyleentries')
+    ]
+
+    def __init__(self, style=const.PS_SOLID, width=1, color=0,
+                 styleentries=[]):
+        """Create pen.
+        styleentries is a list of dash and space lengths."""
+
+        CREATEPALETTE.__init__(self)
+
+        self.style = style
+        self.penwidth = width
+        self.color = pyemf._normalizeColor(color)
+        self.brushstyle = 0x0  # solid
+
+        if style & const.PS_STYLE_MASK != const.PS_USERSTYLE:
+            styleentries = []
+
+        self.numstyleentries = len(styleentries)
+        if styleentries:
+            self.unhandleddata = struct.pack(
+                "i"*self.numstyleentries, *styleentries)
+
+    def hasHandle(self):
+        return True
 
 
 #define EMR_POLYTEXTOUTA	96

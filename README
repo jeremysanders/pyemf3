@@ -1,11 +1,12 @@
-This is a forked version of pyemf with support for Python 3.3+.
+pyemf3 is an updated version of pyemf with support for Python 3.3+
 
-This no longer supports Python 2.x
+Original author: Rob McMullen
+Updater to Python 3: Jeremy Sanders
 
 ABSTRACT
 ========
 
-pyemf is a pure python module that provides bindings for an ECMA-234
+pyemf3 is a pure python module that provides bindings for an ECMA-234
 compliant vector graphics library.  ECMA-234 is the published
 interface for the Windows GDI used in the Microsoft windows
 environment and, more importantly, natively supported by the
@@ -18,57 +19,14 @@ http://www.ecma-international.org/publications/standards/Ecma-234.htm
 PREREQUISITES
 =============
 
-python (tested under 2.2, 2.3 and 2.4)
+python3 (tested with python 3.10)
 
 
 
 QUICK INSTALL
 =============
 
-python setup.py install
-
-Yep, that's pretty much it, unless you have unpatched versions of
-PyRTF or matplotlib.
-
-
-Patch for PyRTF
----------------
-
-If you have an unpatched version of PyRTF, you may apply the included
-patch to provide EMF support.  You can either apply it to the source
-distribution, or to the site libraries (where you might have to be
-root).
-
-$ cd PyRTF-0.45/PyRTF
-$ patch -p0 < PyRTF-0.45-EMF-patch.diff
-$ cd ..
-$ python setup.py install
-
-or
-
-$ cd [path to python site-packages]/PyRTF
-$ patch -p0 < PyRTF-0.45-EMF-patch.diff
-
-
-Patch for matplotlib
---------------------
-
-The included patch works against matplotlib 0.84 or 0.85; against
-earlier versions you may need to edit matplotlib/__init__.py to add
-'EMF':1 to the _knownBackends dict and edit
-matplotlib/backends/__init__.py to add 'EMF' to the non_interactive_bk
-list.  matplotlib/backends/backend_emf.py should be added in all
-cases.
-
-$ cd matplotlib-0.85/lib
-$ patch -p0 < matplotlib-0.85-EMF-patch.diff
-$ python setup.py install
-
-or
-
-$ cd [path to python site-packages]
-$ patch -p0 < matplotlib-0.85-EMF-patch.diff
-
+python3 setup.py install
 
 
 
@@ -183,23 +141,3 @@ OpenOffice Impress.
 
 Also included in the examples directory is the program
 'test--run-all.py' that will run all the tests.
-
-
-
-
-KNOWN ISSUES
-============
-
-See the website at $url/roadmap.html for more
-information on the unsupported parts of the ECMA-234 standard.
-
-
-
-DISCLAIMER
-==========
-
-$prog, Copyright (c) $yearrange $author ($author_email)
-
-$prog comes with ABSOLUTELY NO WARRANTY; for details see the
-file COPYING included in the source distribution, or see the web site
-http://www.gnu.org/copyleft/lesser.html for more information.
