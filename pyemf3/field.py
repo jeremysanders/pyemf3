@@ -1,26 +1,17 @@
-#!/usr/bin/env python
-
-import os,sys,re
 import struct
-from cStringIO import StringIO
-import copy
+from io import StringIO, BytesIO
 
-# setup.py requires that these be defined, and the OnceAndOnlyOnce
-# principle is used here.  This is the only place where these values
-# are defined in the source distribution, and everything else that
-# needs this should grab it from here.
-__version__ = "1.0.0"
-__author__ = "Rob McMullen"
-__author_email__ = "robm@users.sourceforge.net"
-__url__ = "http://pyemf.sourceforge.net/structrecord"
-__download_url__ = "http://sourceforge.net/project/showfiles.php?group_id=148144"
-__description__ = "Parse record-based binary files into Python objects"
-__keywords__ = "binary, record, struct, pack, unpack"
-__license__ = "LGPL"
+def _round4(num):
+    """Round to the nearest multiple of 4 greater than or equal to the
+    given number.  EMF records are required to be aligned to 4 byte
+    boundaries."""
+    return ((num+3)//4)*4
 
-debug=False
+##### - Field, Record, and related classes: a way to represent data
+##### more advanced than using just import struct
 
-class Member(object):
+# A structrecord class for EMF strings
+class Field:
     def __init__(self,fmt,size=1,num=1,offset=None):
         # Format string, if applicable
         self.fmt=fmt
@@ -47,7 +38,7 @@ class Member(object):
     def calcNumBytes(self,obj,name):
         if isinstance(obj.values[name],list) or isinstance(obj.values[name],tuple):
             size=self.size*len(obj.values[name])
-            if debug: print "  calcNumBytes: size=%d len(obj.values[%s])=%d total=%d" % (self.size,name,len(obj.values[name]),size)
+            if self.debug: print("  calcNumBytes: size=%d len(obj.values[%s])=%d total=%d" % (self.size,name,len(obj.values[name]),size))
             # also update the linked number, if applicable
         else:
             size=self.size*self.getNum(obj)
@@ -87,7 +78,7 @@ class Member(object):
             offset+=self.offset
         elif obj:
             offset+=getattr(obj,self.offset) # find obj."offset"
-        if debug: print "getting offset for obj=%s, self.offset=%s => offset=%d" % (obj.__class__.__name__,self.offset,offset)
+        if self.debug: print("getting offset for obj=%s, self.offset=%s => offset=%d" % (obj.__class__.__name__,self.offset,offset))
         return offset
 
     def hasOffsetReference(self):
@@ -112,9 +103,9 @@ class Member(object):
     def getString(self,name,val):
         return val
 
-class StructFormat(Member):
+class StructFormat(Field):
     def __init__(self,fmt):
-        Member.__init__(self,fmt,struct.calcsize(fmt))
+        Field.__init__(self,fmt,struct.calcsize(fmt))
 
     def unpack(self,obj,name,data,ptr):
         value=struct.unpack(self.fmt,data[ptr:ptr+self.size])[0]
@@ -133,10 +124,10 @@ class StructFormat(Member):
             val=val.decode('utf-16le')
         return val
 
-class String(Member):
+class String(Field):
     def __init__(self,default=None,size=1,num=1,offset=None):
         # Note the two bytes per unicode char
-        Member.__init__(self,None,size=size,num=num,offset=offset)
+        Field.__init__(self,None,size=size,num=num,offset=offset)
         self.setDefault(default)
 
     def calcNumBytes(self,obj,name):
@@ -151,13 +142,13 @@ class String(Member):
             return len(txt)
         else:
             # this is a fixed length string, so we know the length already.
-            return Member.calcNumBytes(self,obj,name)
+            return Field.calcNumBytes(self,obj,name)
 
     def calcNum(self,obj,name):
         if self.hasNumReference():
             return len(obj.values[name])
         else:
-            return Member.calcNumBytes(self,obj,name)
+            return Field.calcNumBytes(self,obj,name)
 
     def unpack(self,obj,name,data,ptr):
         offset=self.getOffset(obj)
@@ -172,11 +163,11 @@ class String(Member):
         txt=data[ptr:ptr+size]
         if self.size==2:
             txt=txt.decode('utf-16') # Now is a unicode string
-        if debug:
+        if self.debug:
             try:
-                print "str: '%s'" % str(txt)
+                print("str: '%s'" % str(txt))
             except UnicodeEncodeError:
-                print "<<<BAD UNICODE STRING>>>: '%s'" % repr(txt)
+                print("<<<BAD UNICODE STRING>>>: '%s'" % repr(txt))
         return (txt,size)
 
     def pack(self,obj,name,value):
@@ -214,9 +205,9 @@ class CString(String):
             i+=1
         return (txt[0:i],i)
 
-class List(Member):
+class List(Field):
     def __init__(self,default=None,num=1,fmt='i',offset=None):
-        Member.__init__(self,fmt,struct.calcsize(fmt),num,offset=offset)
+        Field.__init__(self,fmt,struct.calcsize(fmt),num,offset=offset)
         self.setDefault(default)
 
     def unpack(self,obj,name,data,ptr):
@@ -229,7 +220,7 @@ class List(Member):
             ptr=offset
         else:
             return (values,0)
-        
+
         num=self.getNum(obj)
         while num>0:
             values.append(struct.unpack(self.fmt,data[ptr:ptr+self.size])[0])
@@ -238,7 +229,7 @@ class List(Member):
         return (values,self.getNumBytes(obj))
 
     def pack(self,obj,name,value):
-        fh=StringIO()
+        fh=BytesIO()
         size=0
         for val in value:
             fh.write(struct.pack(self.fmt,val))
@@ -253,14 +244,14 @@ class List(Member):
         self.default=default
 
 
-class Tuples(Member):
+class Tuples(Field):
     def __init__(self,default=None,rank=2,num=1,fmt='i',offset=None):
         if fmt[0] in "<>@!=":
             fmt=fmt[0]+fmt[1]*rank
         else:
             fmt=fmt*rank
-        Member.__init__(self,fmt,struct.calcsize(fmt),num,offset=offset)
-        if debug: print "Tuples:%s self.size=%d" % (self.__class__.__name__,self.size)
+        Field.__init__(self,fmt,struct.calcsize(fmt),num,offset=offset)
+        if self.debug: print("Tuples:%s self.size=%d" % (self.__class__.__name__,self.size))
         self.rank=rank
         self.setDefault(default)
 
@@ -275,9 +266,9 @@ class Tuples(Member):
             ptr=offset
         else:
             return (values,0)
-        
+
         num=self.getNum(obj)
-        if debug: print "unpack: name=%s num=%d ptr=%d datasize=%d" % (name,num,ptr,len(data))
+        if self.debug: print("unpack: name=%s num=%d ptr=%d datasize=%d" % (name,num,ptr,len(data)))
         while num>0:
             values.append(list(struct.unpack(self.fmt,data[ptr:ptr+self.size])))
             ptr+=self.size
@@ -286,9 +277,9 @@ class Tuples(Member):
 
     # assuming a list of lists
     def pack(self,obj,name,value):
-        fh=StringIO()
+        fh=BytesIO()
         size=0
-        if debug: print "pack: value=%s" % (str(value))
+        if self.debug: print("pack: value=%s" % (str(value)))
         for val in value:
             fh.write(struct.pack(self.fmt,*val))
         return fh.getvalue()
@@ -321,7 +312,7 @@ def FormatFactory(fmt):
 
 class RecordFormat:
     default_endian="<"
-    
+
     def __init__(self,typedef):
         self.typedef=typedef
         self.minstructsize=0 # minimum structure size (variable entries not counted)
@@ -331,7 +322,7 @@ class RecordFormat:
         self.default={}
 
         self.names=[] # order of names in record
-        
+
         self.debug=0
 
         self.fmt=''
@@ -345,7 +336,7 @@ class RecordFormat:
         return values
 
     def setFormat(self,typedef,default=None):
-        if self.debug: print "typedef=%s" % str(typedef)
+        if self.debug: print("typedef=%s" % str(typedef))
         if isinstance(typedef,list) or isinstance(typedef,tuple):
             for item in typedef:
                 if len(item)==3:
@@ -355,7 +346,7 @@ class RecordFormat:
                 self.appendFormat(typecode,name,default)
         elif typedef:
             raise AttributeError("format must be a list")
-        if self.debug: print "current struct=%s size=%d\n  names=%s" % (self.fmt,self.minstructsize,self.names)
+        if self.debug: print("current struct=%s size=%d\n  names=%s" % (self.fmt,self.minstructsize,self.names))
 
     def appendFormat(self,typecode,name,defaultvalue):
         if isinstance(typecode,str):
@@ -365,7 +356,7 @@ class RecordFormat:
             fmtobj=FormatFactory(typecode)
             self.fmtmap[name]=fmtobj
             self.default[name]=defaultvalue
-        elif isinstance(typecode,Member):
+        elif isinstance(typecode,Field):
             self.fmt+='{'+typecode.__class__.__name__+'}'
             if defaultvalue is not None:
                 typecode.setDefault(defaultvalue)
@@ -382,9 +373,9 @@ class RecordFormat:
         size=0
         for name in self.names:
             fmt=self.fmtmap[name]
-            bytes=fmt.calcNumBytes(obj,name)
-            if debug: print "calcNumBytes: %s=%d" % (name,bytes)
-            size+=bytes
+            nbytes=fmt.calcNumBytes(obj,name)
+            if self.debug: print("calcNumBytes: %s=%d" % (name,nbytes))
+            size+=nbytes
         return size
 
     def unpack(self,data,obj,initptr=0):
@@ -400,24 +391,24 @@ class RecordFormat:
                 fmt=self.fmtmap[name]
                 (value,size)=fmt.unpack(obj,name,data,ptr)
                 #if fmt.fmt=="<i": value=0
-                #if debug: print "name=%s fmt=%s value=%s" % (name,fmt.fmt,str(value))
+                #if self.debug: print "name=%s fmt=%s value=%s" % (name,fmt.fmt,str(value))
                 obj.values[name]=value
                 ptr+=size
         return ptr
 
     def pack(self,values,obj,alreadypacked=0):
-        fh=StringIO()
+        fh=BytesIO()
         size=0
         output={}
-        
+
         # First, create all the output bytes
         for name in self.names:
             fmt=self.fmtmap[name]
             try:
                 output[name]=fmt.pack(obj,name,values[name])
             except:
-                print "Exception while trying to pack %s for object:" % name
-                print obj
+                print("Exception while trying to pack %s for object:" % name)
+                print(obj)
                 raise
 
             # check if the offset to this parameter needs to be
@@ -426,21 +417,21 @@ class RecordFormat:
             refname=fmt.hasOffsetReference()
             #print output[name]
             if refname and output[name]:
-                if debug: print "pack: %s has offset %s, was=%d now=%d" % (name,refname,values[refname],size+alreadypacked)
+                if self.debug: print("pack: %s has offset %s, was=%d now=%d" % (name,refname,values[refname],size+alreadypacked))
                 values[refname]=size+alreadypacked
                 output[refname]=self.fmtmap[refname].pack(obj,refname,values[refname])
 
             # also need to check if a dependent length needs to be updated
             refname=fmt.hasNumReference()
-            #if debug: print output[name]
+            #if self.debug: print output[name]
             if refname and output[name]:
                 newnum=fmt.calcNum(obj,name)
-                if debug: print "pack: %s has num %s, was=%d now=%d" % (name,refname,values[refname],newnum)
+                if self.debug: print("pack: %s has num %s, was=%d now=%d" % (name,refname,values[refname],newnum))
                 values[refname]=newnum
                 output[refname]=self.fmtmap[refname].pack(obj,refname,values[refname])
-            
+
             size+=len(output[name])
-            
+
         # Finally, write all the output bytes to the filehandle
         for name in self.names:
             fh.write(output[name])
@@ -459,12 +450,12 @@ class RecordFormat:
         return txt.getvalue()
 
 
-class Record(object):
+class Record:
     """baseclass for binary records"""
-    
+
     format=None
     typedef=()
-    
+
     def __init__(self):
         # if we've never seen this class before, create a new format.
         # Note that subclasses of classes that we have already seen
@@ -472,12 +463,11 @@ class Record(object):
         # superclasses, so we have to check if this is a subclass with
         # a different typedef
         if self.__class__.format==None or self.__class__.typedef != self.format.typedef:
-            # if debug: print "creating format for %d" % id
+            # if self.debug: print "creating format for %d" % id
             self.__class__.format=RecordFormat(self.__class__.typedef)
 
         # list of values parsed from the input stream
         self.values=self.__class__.format.getDefaults()
-
 
     def __getattr__(self,name):
         """Return EMR attribute if the name exists in the typedef list
@@ -507,3 +497,82 @@ class Record(object):
         except IndexError:
             raise IndexError("name=%s index=%d values=%s" % (name,index,str(v)))
 
+
+
+
+class EMFString(Field):
+    def __init__(self,default=None,size=2,num=1,offset=None):
+        # Note the two bytes per unicode char
+        Field.__init__(self,None,size=size,num=num,offset=offset)
+        self.setDefault(default)
+
+    def calcNumBytes(self,obj,name):
+        if self.hasNumReference():
+            # If this is a dynamic string, calculate the size required
+            txt=obj.values[name]
+            if self.size==2:
+                # it's unicode, so get the number of actual bytes required
+                # to store it
+                txt=txt.encode('utf-16le')
+            # EMF requires that strings be stored as multiples of 4 bytes
+            extra=_round4(len(txt))-len(txt)
+            return len(txt)+extra
+        else:
+            # this is a fixed length string, so we know the length already.
+            return Field.calcNumBytes(self,obj,name)
+
+    def calcNum(self,obj,name):
+        if self.hasNumReference():
+            return len(obj.values[name])
+        else:
+            return Field.calcNumBytes(self,obj,name)
+
+    def unpack(self,obj,name,data,ptr):
+        offset=self.getOffset(obj)
+        if offset==None:
+            pass
+        elif offset>0:
+            ptr=offset
+        else:
+            return ('',0)
+
+        size=self.getNumBytes(obj)
+        txt=data[ptr:ptr+size]
+        size=_round4(len(txt))
+
+        if self.size == 2:
+            txt = txt.decode('utf-16le')
+        else:
+            txt = txt.decode('ascii')
+
+        if self.debug:
+            print("str: '%s'" % str(txt))
+        return (txt,size)
+
+    def pack(self, obj, name, value):
+        txt = value
+        if self.size == 2:
+            txt = txt.encode('utf-16le')
+        else:
+            txt = txt.encode('ascii')
+
+        if self.hasNumReference():
+            extra=_round4(len(txt))-len(txt) # must be multiple of 4
+            if extra>0:
+                txt+=b'\0'*extra
+        else:
+            maxlen=self.getNumBytes(obj)
+            if len(txt)>maxlen:
+                txt=txt[0:maxlen]
+            else:
+                txt+=b'\0'*(maxlen-len(txt))
+        return txt
+
+    def getDefault(self):
+        # FIXME: need to take account of number
+        return self.default
+
+    def setDefault(self,default):
+        if default is None:
+            default = ''
+        self.default=default
