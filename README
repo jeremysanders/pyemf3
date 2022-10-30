@@ -33,7 +33,7 @@ python3 setup.py install
 FEATURES
 ========
 
-Most of the drawing methods of ECMA-234 are supported by pyemf.
+Most of the drawing methods of ECMA-234 are supported by pyemf3.
 
 Supported
 ---------
@@ -98,15 +98,15 @@ Creating an EMF
 Here's a simple program (available as test-1.py in the distribution)
 that connects opposite corners of an 8in by 6in rectangle with lines:
 
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import pyemf
+import pyemf3
 
 width=8
 height=6
 dpi=300
 
-emf=pyemf.EMF(width,height,dpi)
+emf=pyemf3.EMF(width,height,dpi)
 thin=emf.CreatePen(pyemf.PS_SOLID,1,(0x01,0x02,0x03))
 emf.SelectObject(thin)
 emf.Polyline([(0,0),(width*dpi,height*dpi)])
@@ -114,23 +114,12 @@ emf.Polyline([(0,height*dpi),(width*dpi,0)])
 emf.save("test-1.emf")
 
 
-Examining an EMF
-----------------
-
-pyemf, when run as a standalone program, has the ability to read an
-EMF and print out the contents.  Run:
-
-$ pyemf.py -v test-1.emf
-
-and it will print out a text summary of all the metafile records in
-the file.
-
 
 Other tests
 -----------
 
 There are many other tests included in the examples/ directory in the
-source distribution.  After installing the pyemf library, you should
+source distribution.  After installing the pyemf3 library, you should
 be able to run them like this:
 
 $ cd examples
