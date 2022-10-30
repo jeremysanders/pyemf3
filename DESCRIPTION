@@ -1,4 +1,4 @@
-pyemf is a pure python module that provides a cross-platform ability
+pyemf3 is a pure python module that provides a cross-platform ability
 to generate enhanced metafiles (.emf files), a vector graphics format
 defined by the ECMA-234 standard.  Enhanced metafiles are a natively
 supported image and scalable clip-art format in the OpenOffice suite
@@ -9,34 +9,34 @@ is the published interface for enhanced metafiles, which is also a
 file-based representation of the Windows graphics device interface.
 This API follows most of the naming conventions of ECMA-234, and most
 of the parameter lists of methods are the same as their ECMA-234
-equivalents.  The primary difference is that pyemf has extended the
+equivalents.  The primary difference is that pyemf3 has extended the
 API to be object-oriented based on the class L{EMF}.  So, while in
 ECMA-234 the first argument is generally the device context, here in
-pyemf it is implicit in the class instance.
+pyemf3 it is implicit in the class instance.
 
 ECMA-234 defines a lot of constants (mostly integers that are used as
-flags to various functions) that pyemf defines as module level
+flags to various functions) that pyemf3 defines as module level
 variables.  So, rather than pollute your global namespace, it is
-recommended that you use C{import pyemf} rather than C{from pyemf
+recommended that you use C{import pyemf3} rather than C{from pyemf3
 import *}.
 
 Introduction
 ============
 
-To use pyemf in your programs, you L{instantiate<EMF.__init__>} an
+To use pyemf3 in your programs, you L{instantiate<EMF.__init__>} an
 L{EMF} object, draw some stuff using its methods, and save the file.
 An example::
 
   #!/usr/bin/env python
 
-  import pyemf
+  import pyemf3
 
   width=8.0
   height=6.0
   dpi=300
 
-  emf=pyemf.EMF(width,height,dpi)
-  thin=emf.CreatePen(pyemf.PS_SOLID,1,(0x01,0x02,0x03))
+  emf=pyemf3.EMF(width,height,dpi)
+  thin=emf.CreatePen(pyemf3.PS_SOLID,1,(0x01,0x02,0x03))
   emf.SelectObject(thin)
   emf.Polyline([(0,0),(width*dpi,height*dpi)])
   emf.Polyline([(0,height*dpi),(width*dpi,0)])
@@ -44,18 +44,18 @@ An example::
 
 This small program creates a 8in x 6in EMF at 300 dots per inch, and
 draws two lines connecting the opposite corners.  This simple test is
-available as C{test-1.py} in the C{examples} directory of the pyemf
+available as C{test-1.py} in the C{examples} directory of the pyemf3
 distribution.  There are many other small test programs to demonstrate
 other features of the EMF class.
 
 
-Naming Conventions in pyemf
-===========================
+Naming Conventions in pyemf3
+============================
 
 Methods that belong to ECMA-234 are C{CamelCased} starting with a
 capital letter.  Methods that apply to the operation of the L{EMF}
 class itself (i.e. L{load<EMF.load>} and L{save<EMF.save>}) are
-C{lower} cased.  Constants described in L{pyemf} that are used as
+C{lower} cased.  Constants described in L{pyemf3} that are used as
 parameters are C{ALL_UPPER_CASE}.
 
 
@@ -111,7 +111,7 @@ system capable of rendering an EMF.
 Colors
 ------
 
-A quick note about color.  Colors in pyemf are specified one of three
+A quick note about color.  Colors in pyemf3 are specified one of three
 ways:
 
   - (r,g,b) tuple, where each component is a integer between 0 and 255 inclusive.
@@ -150,7 +150,7 @@ gradients in EMF.  Examining some .emfs that do have gradients shows
 that Windows produces them using clipping regions and subdividing the
 object into areas of a single color an drawing slices of the
 individual color.  Better support for clipping regions is the subject
-of a future release of pyemf, but they also don't seem to work well in
+of a future release of pyemf3, but they also don't seem to work well in
 OpenOffice, so it hasn't been a high priority.
 
 
@@ -172,7 +172,7 @@ L{SelectObject<EMF.SelectObject>} characteristic.  It is specified
 using the separate method L{SetTextColor<EMF.SetTextColor>}.
 L{SetBkMode<EMF.SetBkMode>} and L{SetBkColor<EMF.SetBkColor>} are
 supposed to work with text, but in my testing with OpenOffice it hasn't been
-consistent.  I tend to just C{SetBkMode(pyemf.TRANSPARENT)} and leave
+consistent.  I tend to just C{SetBkMode(pyemf3.TRANSPARENT)} and leave
 it at that.
 
 

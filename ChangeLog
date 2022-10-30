@@ -1,3 +1,8 @@
+2022-10-30  Jeremy Sanders <jeremy@jeremysanders.net>
+	* Update to use Python 3
+	* Refactor parts into separate files
+	* Add EXTCREATEPEN
+
 2006-08-19  Rob McMullen  <robm@users.sourceforge.net>
 
 	* refactoring: new, more flexible way of specifying the binary
@@ -22,7 +27,7 @@
 	* added: program to run all tests
 
 	* fixed: problems in some examples with Python 2.2
-	
+
 
 2005-12-07  Rob McMullen  <robm@users.sourceforge.net>
 
@@ -47,7 +52,7 @@
 	module's docstring
 
 	* fixed setup.py to ignore python2.3 warning message:
-	pyemf.py:2340: FutureWarning: hex/oct constants > sys.maxint 
+	pyemf.py:2340: FutureWarning: hex/oct constants > sys.maxint
 		       will return positive values in Python 2.4 and up
 	return obj|0x80000000
 
@@ -56,4 +61,3 @@
 2005-11-19  Rob McMullen  <robm@users.sourceforge.net>
 
 	* initial release of version 2.0.0b1 to SourceForge
-	
