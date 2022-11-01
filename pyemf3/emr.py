@@ -1049,7 +1049,7 @@ class EXTCREATEPEN(CREATEPALETTE):
 
         self.style = style
         self.penwidth = width
-        self.color = pyemf._normalizeColor(color)
+        self.color = color
         self.brushstyle = 0x0  # solid
 
         if style & const.PS_STYLE_MASK != const.PS_USERSTYLE:

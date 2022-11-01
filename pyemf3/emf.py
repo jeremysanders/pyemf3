@@ -405,7 +405,7 @@ records.
         self.dc.removeObject(handle)
         return self._append(e)
 
-    def CreatePen(self,style,width,color):
+    def CreatePen(self,style,width,color,styleentries=None):
         """
 
 Create a pen, used to draw lines and path outlines.
@@ -431,7 +431,15 @@ Create a pen, used to draw lines and path outlines.
 @type color: int
 
         """
-        return self._appendHandle(emr.CREATEPEN(style,width,_normalizeColor(color)))
+
+        if styleentries is None:
+            handle = emr.CREATEPEN(style, width, _normalizeColor(color))
+        else:
+            handle = emr.EXTCREATEPEN(
+                style=style, width=width, color=_normalizeColor(color),
+                styleentries=styleentries)
+
+        return self._appendHandle(handle)
 
     def CreateSolidBrush(self,color):
         """
