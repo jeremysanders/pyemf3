@@ -423,6 +423,7 @@ Create a pen, used to draw lines and path outlines.
  - PS_ALTERNATE
 @param    width:  	the width of the new pen.
 @param    color:  	(r,g,b) tuple or the packed integer L{color<RGB>} of the new pen.
+@param    styleentries: optional list of dash codes for custom dash
 
 @return:    handle to the new pen graphics object.
 @rtype: int
@@ -1530,5 +1531,61 @@ other text attributes.
         e = emr.EXTTEXTOUT_auto(x, y, text)
 
         if not self._append(e):
+            return 0
+        return 1
+
+    def BitmapOut(self,dest_left,dest_top,dest_width,dest_height,
+                  src_left,src_top,src_width,src_height,
+                  bmp, rop=const.ROP_SRCCOPY):
+
+        """
+
+Draw a bitmap image on the output, given by the destination rectangle,
+taking the data from the source rectangle. Data need to be in BMP format.
+Currently assumes RGB colours.
+
+@param dest_left: left x position of destination rectangle
+@param dest_top: top y position of destination rectangle
+@param dest_width: width of destination rectangle
+@param dest_height: height of destination rectangle
+@param src_left: left x position of source rectangle
+@param src_top: top y position of source rectangle
+@param src_width: width of source rectangle
+@param src_height: height of source rectangle
+@param bmp: bytes string containing BMP data
+@param rop: operation to apply when drawing.
+        """
+
+        dib = bmp[0xe:]
+        hdrsize, = struct.unpack('<i', bmp[0xe:0x12])
+        dataindex, = struct.unpack('<i', bmp[0xa:0xe])
+        datasize, = struct.unpack('<i', bmp[0x22:0x26])
+
+        epix = emr.STRETCHDIBITS()
+        epix.rclBounds_left = dest_left
+        epix.rclBounds_top = dest_top
+        epix.rclBounds_right = dest_left + dest_width
+        epix.rclBounds_bottom = dest_top + dest_height
+        epix.xDest = dest_left
+        epix.yDest = dest_top
+        epix.cxDest = dest_width
+        epix.cyDest = dest_height
+        epix.xSrc = src_left
+        epix.ySrc = src_top
+        epix.cxSrc = src_width
+        epix.cySrc = src_height
+
+        epix.dwRop = rop
+        offset = epix.format.minstructsize + 8
+        epix.offBmiSrc = offset
+        epix.cbBmiSrc = hdrsize
+        epix.offBitsSrc = offset + dataindex - 0xe
+        epix.cbBitsSrc = datasize
+        epix.iUsageSrc = 0x0 # DIB_RGB_COLORS
+
+        epix.unhandleddata = dib
+
+        e = self._append(epix)
+        if not e:
             return 0
         return 1
