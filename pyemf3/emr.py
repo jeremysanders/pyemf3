@@ -185,7 +185,7 @@ class HEADER(EMR_UNKNOWN):
             [dc.frame_right,dc.frame_bottom]
         ]
 
-        print(self)
+        #print(self)
         if scaleheader:
             self.szlDevice[0]=dc.pixelwidth
             self.szlDevice[1]=dc.pixelheight
