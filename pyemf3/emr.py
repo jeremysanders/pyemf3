@@ -934,7 +934,7 @@ class EXTTEXTOUTW(EXTTEXTOUTA):
         ('f','eyScale',1.0),
         ('i','ptlReference_x'),
         ('i','ptlReference_y'),
-        ('i','nChars'),
+        ('i','nChars',1),
         ('i','offString',0),
         ('i','fOptions',0),
         (Points(num=2),'rcl',[[0,0],[-1,-1]]),
