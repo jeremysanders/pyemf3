@@ -7,7 +7,7 @@ with open('DESCRIPTION') as fin:
 
 setup(
     name = 'pyemf3',
-    version = "3.1",
+    version = "3.3",
     description = "Pure Python Enhanced Metafile Library",
     long_description = long_description,
     keywords = "graphics, scalable, vector, image, clipart, emf",
