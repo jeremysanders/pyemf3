@@ -999,8 +999,8 @@ Draw a rectangle with rounded corners using the current pen.
 @type cornerheight: int
 
         """
-        return self._append(emr.ROUNDRECT((((left,top),(right,bottom)),
-                                           cornerwidth,cornerheight)))
+        return self._append(emr.ROUNDRECT(((left,top),(right,bottom)),
+                                           cornerwidth,cornerheight))
 
     def Arc(self,left,top,right,bottom,xstart,ystart,xend,yend):
         """
