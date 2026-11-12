@@ -2,7 +2,7 @@
 
 # Test of bounds checking and 16bit/32bit versions of polygon, polyline, etc.
 
-import pyemf
+import pyemf3 as pyemf
 
 width=8
 height=6

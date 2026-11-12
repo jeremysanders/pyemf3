@@ -2,7 +2,7 @@
 
 # Test polygon fill mode
 
-import pyemf
+import pyemf3 as pyemf
 
 def polygon(emf,x,y):
     points=[(x,y+100),(x+400,y+400),(x+500,y+100),(x+800,y+400),(x+800,y+100),(x,y+400),
