@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import pyemf
+import pyemf3 as pyemf
 
 # Test of handles and deleting objects.
 
