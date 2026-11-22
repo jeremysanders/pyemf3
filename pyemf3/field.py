@@ -207,6 +207,9 @@ class CString(String):
 
 class List(Field):
     def __init__(self,default=None,num=1,fmt='i',offset=None):
+        # EMF uses little-endian values with standard sizes on every platform.
+        if fmt[0] not in "<>@!=":
+            fmt='<'+fmt
         Field.__init__(self,fmt,struct.calcsize(fmt),num,offset=offset)
         self.setDefault(default)
 
@@ -249,7 +252,7 @@ class Tuples(Field):
         if fmt[0] in "<>@!=":
             fmt=fmt[0]+fmt[1]*rank
         else:
-            fmt=fmt*rank
+            fmt='<'+fmt*rank
         Field.__init__(self,fmt,struct.calcsize(fmt),num,offset=offset)
         if self.debug: print("Tuples:%s self.size=%d" % (self.__class__.__name__,self.size))
         self.rank=rank

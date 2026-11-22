@@ -1058,7 +1058,7 @@ class EXTCREATEPEN(CREATEPALETTE):
         self.numstyleentries = len(styleentries)
         if styleentries:
             self.unhandleddata = struct.pack(
-                "i"*self.numstyleentries, *styleentries)
+                "<"+"i"*self.numstyleentries, *styleentries)
 
     def hasHandle(self):
         return True
