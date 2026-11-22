@@ -128,8 +128,8 @@ class DC:
 
         self.setPhysicalSize(header.rclFrame)
         if header.szlMicrometers[0]>0:
-            self.ref_width=header.szlMicrometers[0]/10
-            self.ref_height=header.szlMicrometers[1]/10
+            self.ref_width=header.szlMicrometers[0]//10
+            self.ref_height=header.szlMicrometers[1]//10
         else:
             self.ref_width=header.szlMillimeters[0]*100
             self.ref_height=header.szlMillimeters[1]*100
