@@ -4,7 +4,7 @@ import os,sys
 import glob
 import filecmp
 
-import pyemf
+import pyemf3 as pyemf
 
 FILTER=''.join([(len(repr(chr(x)))==3) and chr(x) or '.' for x in range(256)])
 

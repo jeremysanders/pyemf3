@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import pyemf
+import pyemf3 as pyemf
 
 def path(emf,text,x,y,size=300):
     emf.TextOut(x,y,text);

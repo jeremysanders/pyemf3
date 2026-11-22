@@ -5,7 +5,7 @@ from __future__ import print_function
 import os,sys
 import glob
 import filecmp
-import pyemf
+import pyemf3 as pyemf
 
 is_py3 = sys.version_info[0] == 3
 if is_py3:
